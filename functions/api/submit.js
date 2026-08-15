@@ -146,29 +146,37 @@ export async function onRequestPost(context) {
       sigIv = encryptedSigData.iv;
     }
 
-    // Insert submission
+    // Fix for schema mismatch
+    const submissionId = crypto.randomUUID();
+    const combinedIv = `${fieldsIv}:${sigIv}`;
+    const userAgentHash = await sha256(new TextEncoder().encode(auditData.userAgent));
+    const ipHash = await sha256(new TextEncoder().encode(ip));
+    
+    // Ensure no variables are undefined (D1 throws type error for undefined)
+    const safeTemplateId = templateId || null;
+    const safeVersionId = versionId || null;
+    const safePdfKey = pdf_r2_key || '';
+    const safePdfHash = pdfHash || '';
+
     const insertSubQuery = `
       INSERT INTO submissions 
-      (template_id, version_id, encrypted_pii_data, encrypted_pii_iv, encrypted_signature_svg, encrypted_signature_iv, pdf_r2_key, pdf_hash, created_at, client_ip_hash)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), ?)
+      (id, template_id, template_version_id, field_data_enc, signature_svg_enc, encryption_iv, consent_accepted, pdf_r2_key, pdf_hash, ip_hash, user_agent_hash)
+      VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
     `;
-    
-    // IP Hash
-    const ipHash = await sha256(new TextEncoder().encode(ip));
 
     const insertResult = await env.DB.prepare(insertSubQuery).bind(
-      templateId,
-      versionId,
+      submissionId,
+      safeTemplateId,
+      safeVersionId,
       encryptedFields,
-      fieldsIv,
       encryptedSig,
-      sigIv,
-      pdf_r2_key,
-      pdfHash,
-      ipHash
-    ).run();
+      combinedIv,
+      safePdfKey,
+      safePdfHash,
+      ipHash,
+      userAgentHash
 
-    const submissionId = insertResult.meta.last_row_id;
+    ).run();
 
     if (token) {
       await env.DB.prepare(`UPDATE client_links SET status = 'used' WHERE token = ?`).bind(token).run();
