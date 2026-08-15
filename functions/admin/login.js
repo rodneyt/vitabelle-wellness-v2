@@ -69,7 +69,7 @@ export async function onRequestPost(context) {
     const sessionId = crypto.randomUUID();
     const expiresAt = Math.floor(Date.now() / 1000) + (60 * 60 * 24); // 24 hours
 
-    await context.env.DB.prepare('INSERT INTO sessions (session_id, admin_id, expires_at) VALUES (?, ?, ?)')
+    await context.env.DB.prepare('INSERT INTO sessions (id, admin_id, expires_at) VALUES (?, ?, ?)')
       .bind(sessionId, admin.id, expiresAt)
       .run();
 
