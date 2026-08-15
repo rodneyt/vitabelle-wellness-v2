@@ -4,7 +4,7 @@ export async function onRequestPost(context) {
   const sessionId = sessionMatch ? sessionMatch[1] : null;
 
   if (sessionId) {
-    await context.env.DB.prepare('DELETE FROM sessions WHERE session_id = ?').bind(sessionId).run();
+    await context.env.DB.prepare('DELETE FROM sessions WHERE id = ?').bind(sessionId).run();
   }
 
   return new Response('', {
