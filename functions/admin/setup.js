@@ -1,4 +1,4 @@
-import { generatePBKDF2 } from '../_shared/crypto.js';
+import { hashPassword, encryptAESGCM } from '../_shared/crypto.js';
 import { generateTOTPSecret, generateTOTPUri } from '../_shared/totp.js';
 
 function html(body) {
@@ -52,15 +52,14 @@ export async function onRequestPost(context) {
 
   if (!username || !password) return new Response('Missing fields', { status: 400 });
 
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('');
-  const hashHex = await generatePBKDF2(password, saltHex);
+  const hashHex = await hashPassword(password);
 
   const totpSecret = generateTOTPSecret();
   const totpUri = generateTOTPUri(totpSecret, username, 'VitaBelle');
 
-  await context.env.DB.prepare('INSERT INTO admins (username, password_hash, salt, totp_secret) VALUES (?, ?, ?, ?)')
-    .bind(username, hashHex, saltHex, totpSecret)
+  const encSecret = await encryptAESGCM(totpSecret, context.env.ENCRYPTION_KEY);
+  await context.env.DB.prepare('INSERT INTO admins (id, username, password_hash, totp_secret_enc) VALUES (?, ?, ?, ?)')
+    .bind(crypto.randomUUID(), username, hashHex, JSON.stringify(encSecret))
     .run();
 
   return new Response(html(`
