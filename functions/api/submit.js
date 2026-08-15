@@ -119,7 +119,7 @@ export async function onRequestPost(context) {
     let pdfHash = null;
     
     if (pdf_base64) {
-      const b64Data = pdf_base64.replace(/^data:application\/pdf;base64,/, '');
+      const b64Data = pdf_base64.includes(',') ? pdf_base64.split(',')[1] : pdf_base64;
       const binaryString = atob(b64Data);
       const pdfBytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
