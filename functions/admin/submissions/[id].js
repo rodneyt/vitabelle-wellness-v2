@@ -10,8 +10,8 @@ export async function onRequestGet(context) {
   let data = {};
   let errorMsg = '';
   try {
-    if (sub.encrypted_pii_data && sub.encrypted_pii_iv) {
-      const dataStr = await decryptAESGCM(sub.encrypted_pii_data, sub.encrypted_pii_iv, context.env.ENCRYPTION_KEY);
+    if (sub.field_data_enc && sub.encryption_iv) {
+      const dataStr = await decryptAESGCM(sub.field_data_enc, sub.encryption_iv, context.env.ENCRYPTION_KEY);
       data = JSON.parse(dataStr);
     }
   } catch (e) {
@@ -54,5 +54,45 @@ export async function onRequestGet(context) {
         </dl>
       </div>
     </div>
+    
+    <div class="mt-8 flex justify-end">
+      <button onclick="deleteSubmission('${sub.id}')" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+        Delete Submission
+      </button>
+    </div>
+
+    <script>
+      async function deleteSubmission(id) {
+        if (!confirm('Are you sure you want to permanently delete this submission? This action cannot be undone.')) {
+          return;
+        }
+        
+        try {
+          const response = await fetch('/admin/submissions/' + id, { method: 'DELETE' });
+          if (response.ok) {
+            window.location.href = '/admin/submissions';
+          } else {
+            alert('Failed to delete submission');
+          }
+        } catch (e) {
+          alert('Error: ' + e.message);
+        }
+      }
+    </script>
   `), { headers: { 'Content-Type': 'text/html' } });
+}
+
+export async function onRequestDelete(context) {
+  const id = context.params.id;
+  
+  // Get submission first to delete PDF
+  const sub = await context.env.DB.prepare('SELECT pdf_r2_key FROM submissions WHERE id = ?').bind(id).first();
+  
+  if (sub && sub.pdf_r2_key && context.env.PDF_BUCKET) {
+    await context.env.PDF_BUCKET.delete(sub.pdf_r2_key);
+  }
+  
+  await context.env.DB.prepare('DELETE FROM submissions WHERE id = ?').bind(id).run();
+  
+  return new Response('Deleted', { status: 200 });
 }
