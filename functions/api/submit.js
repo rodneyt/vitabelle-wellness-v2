@@ -137,11 +137,11 @@ export async function onRequestPost(context) {
 
     if (typeof encryptAESGCM === 'function' && env.ENCRYPTION_KEY) {
       const encryptedFieldsData = await encryptAESGCM(JSON.stringify(fields), env.ENCRYPTION_KEY);
-      encryptedFields = encryptedFieldsData.encryptedText;
+      encryptedFields = encryptedFieldsData.ciphertext;
       fieldsIv = encryptedFieldsData.iv;
       
       const encryptedSigData = await encryptAESGCM(signature_svg, env.ENCRYPTION_KEY);
-      encryptedSig = encryptedSigData.encryptedText;
+      encryptedSig = encryptedSigData.ciphertext;
       sigIv = encryptedSigData.iv;
     }
 
