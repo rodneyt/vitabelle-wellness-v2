@@ -1,4 +1,4 @@
-import { decryptAESGCM, signHMAC } from '../../src/crypto.js';
+import { decryptAESGCM, signHMAC } from '../../_shared/crypto.js';
 import { layout } from '../templates/index.js';
 
 export async function onRequestGet(context) {

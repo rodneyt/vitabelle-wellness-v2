@@ -1,5 +1,5 @@
-import { generatePBKDF2 } from '../../src/crypto.js';
-import { verifyTOTP } from '../../src/totp.js';
+import { generatePBKDF2 } from '../_shared/crypto.js';
+import { verifyTOTP } from '../_shared/totp.js';
 
 function html(body, error = '') {
   return `<!DOCTYPE html>

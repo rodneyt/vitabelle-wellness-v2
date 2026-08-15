@@ -1,6 +1,6 @@
-import { checkRateLimit } from '../../src/rate-limiter.js';
-import { generateConsentPDF } from '../../src/pdf-generator.js';
-import { encryptAESGCM } from '../../src/crypto.js';
+import { checkRateLimit } from '../_shared/rate-limiter.js';
+import { generateConsentPDF } from '../_shared/pdf-generator.js';
+import { encryptAESGCM } from '../_shared/crypto.js';
 
 async function verifyTurnstile(token, secret, ip) {
   const formData = new FormData();

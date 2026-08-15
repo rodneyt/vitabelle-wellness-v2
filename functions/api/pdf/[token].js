@@ -1,4 +1,4 @@
-import { verifyHMAC } from '../../src/crypto.js';
+import { verifyHMAC } from '../../_shared/crypto.js';
 
 export async function onRequestGet(context) {
   const token = context.params.token;

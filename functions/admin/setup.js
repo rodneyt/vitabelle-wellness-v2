@@ -1,5 +1,5 @@
-import { generatePBKDF2 } from '../../src/crypto.js';
-import { generateTOTPSecret, generateTOTPUri } from '../../src/totp.js';
+import { generatePBKDF2 } from '../_shared/crypto.js';
+import { generateTOTPSecret, generateTOTPUri } from '../_shared/totp.js';
 
 function html(body) {
   return `<!DOCTYPE html>
