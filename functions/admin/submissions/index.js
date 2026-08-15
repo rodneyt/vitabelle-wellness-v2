@@ -8,10 +8,10 @@ export async function onRequestGet(context) {
   for (const sub of results) {
     let name = 'Unknown';
     try {
-      if (sub.encrypted_data) {
-        const dataStr = await decryptAESGCM(sub.encrypted_data, context.env.ENCRYPTION_KEY);
+      if (sub.encrypted_pii_data && sub.encrypted_pii_iv) {
+        const dataStr = await decryptAESGCM(sub.encrypted_pii_data, sub.encrypted_pii_iv, context.env.ENCRYPTION_KEY);
         const data = JSON.parse(dataStr);
-        name = data.name || data.firstName + ' ' + data.lastName || 'Unknown';
+        name = data.name || (data.firstName ? data.firstName + ' ' + data.lastName : null) || data.patient_full_name || 'Unknown';
       }
     } catch (e) {
       name = 'Error decrypting';

@@ -43,9 +43,9 @@ export async function onRequestPost(context) {
     }
 
     const data = await request.json();
-    const { slug, 'cf-turnstile-response': turnstileToken, signature_svg, signature_png, ...fields } = data;
+    const { slug, token, 'cf-turnstile-response': turnstileToken, signature_svg, signature_png, ...fields } = data;
 
-    if (!slug || !turnstileToken || !signature_svg) {
+    if (!(slug || token) || !turnstileToken || !signature_svg) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
@@ -63,20 +63,41 @@ export async function onRequestPost(context) {
       }
     }
 
-    // Lookup template
-    const templateQuery = `SELECT id, current_version_id FROM templates WHERE slug = ?`;
-    const templateResult = await env.DB.prepare(templateQuery).bind(slug).first();
-    if (!templateResult) {
-       return new Response(JSON.stringify({ error: 'Template not found' }), { status: 404 });
+    // Lookup template by token or slug
+    let templateId, versionId, legalBody, schemaStr;
+
+    if (token) {
+      const linkQuery = `SELECT template_id, status, expires_at FROM client_links WHERE token = ?`;
+      const linkResult = await env.DB.prepare(linkQuery).bind(token).first();
+      
+      if (!linkResult || linkResult.status !== 'active' || new Date(linkResult.expires_at) < new Date()) {
+        return new Response(JSON.stringify({ error: 'Invalid or expired secure link' }), { status: 403 });
+      }
+
+      const templateResult = await env.DB.prepare(`SELECT current_version_id FROM templates WHERE id = ?`).bind(linkResult.template_id).first();
+      if (!templateResult) return new Response(JSON.stringify({ error: 'Template not found' }), { status: 404 });
+
+      templateId = linkResult.template_id;
+      versionId = templateResult.current_version_id;
+    } else {
+      const templateQuery = `SELECT id, current_version_id FROM templates WHERE slug = ?`;
+      const templateResult = await env.DB.prepare(templateQuery).bind(slug).first();
+      if (!templateResult) return new Response(JSON.stringify({ error: 'Template not found' }), { status: 404 });
+      
+      templateId = templateResult.id;
+      versionId = templateResult.current_version_id;
     }
 
     const versionQuery = `SELECT id, legal_body, fields_schema FROM template_versions WHERE id = ?`;
-    const versionResult = await env.DB.prepare(versionQuery).bind(templateResult.current_version_id).first();
+    const versionResult = await env.DB.prepare(versionQuery).bind(versionId).first();
     if (!versionResult) {
         return new Response(JSON.stringify({ error: 'Template version not found' }), { status: 404 });
     }
 
-    let schema = versionResult.fields_schema;
+    legalBody = versionResult.legal_body;
+    schemaStr = versionResult.fields_schema;
+
+    let schema = schemaStr;
     if (typeof schema === 'string') {
         try { schema = JSON.parse(schema); } catch(e) { schema = []; }
     }
@@ -94,7 +115,7 @@ export async function onRequestPost(context) {
     let pdf_r2_key = null;
     let pdfHash = null;
     if (typeof generateConsentPDF === 'function') {
-      const pdfBytes = await generateConsentPDF(versionResult.legal_body, fields, signature_png);
+      const pdfBytes = await generateConsentPDF(legalBody, fields, signature_png);
       pdfHash = await sha256(pdfBytes);
       
       pdf_r2_key = crypto.randomUUID() + '.pdf';
@@ -132,8 +153,8 @@ export async function onRequestPost(context) {
     const ipHash = await sha256(new TextEncoder().encode(ip));
 
     const insertResult = await env.DB.prepare(insertSubQuery).bind(
-      templateResult.id,
-      versionResult.id,
+      templateId,
+      versionId,
       encryptedFields,
       fieldsIv,
       encryptedSig,
@@ -145,20 +166,24 @@ export async function onRequestPost(context) {
 
     const submissionId = insertResult.meta.last_row_id;
 
+    if (token) {
+      await env.DB.prepare(`UPDATE client_links SET status = 'used' WHERE token = ?`).bind(token).run();
+    }
+
     // Insert Audit Log
     try {
       // Trying to import audit log if exists, else just write to DB
       const { logAudit } = await import('../../src/audit.js').catch(() => ({ logAudit: null }));
       if (typeof logAudit === 'function') {
-          await logAudit(env.DB, 'SUBMISSION_CREATED', { submissionId, templateId: templateResult.id });
+          await logAudit(env.DB, 'SUBMISSION_CREATED', { submissionId, templateId });
       } else {
           const auditQuery = `INSERT INTO audit_log (action, details, created_at) VALUES (?, ?, datetime('now'))`;
-          await env.DB.prepare(auditQuery).bind('SUBMISSION_CREATED', JSON.stringify({ submissionId, templateId: templateResult.id })).run();
+          await env.DB.prepare(auditQuery).bind('SUBMISSION_CREATED', JSON.stringify({ submissionId, templateId })).run();
       }
     } catch (e) {
        // fallback audit log
        const auditQuery = `INSERT INTO audit_log (action, details, created_at) VALUES (?, ?, datetime('now'))`;
-       await env.DB.prepare(auditQuery).bind('SUBMISSION_CREATED', JSON.stringify({ submissionId, templateId: templateResult.id })).run();
+       await env.DB.prepare(auditQuery).bind('SUBMISSION_CREATED', JSON.stringify({ submissionId, templateId })).run();
     }
 
     return new Response(JSON.stringify({ success: true, id: submissionId }), {

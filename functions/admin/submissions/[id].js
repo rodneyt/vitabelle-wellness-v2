@@ -10,8 +10,8 @@ export async function onRequestGet(context) {
   let data = {};
   let errorMsg = '';
   try {
-    if (sub.encrypted_data) {
-      const dataStr = await decryptAESGCM(sub.encrypted_data, context.env.ENCRYPTION_KEY);
+    if (sub.encrypted_pii_data && sub.encrypted_pii_iv) {
+      const dataStr = await decryptAESGCM(sub.encrypted_pii_data, sub.encrypted_pii_iv, context.env.ENCRYPTION_KEY);
       data = JSON.parse(dataStr);
     }
   } catch (e) {
@@ -19,9 +19,9 @@ export async function onRequestGet(context) {
   }
 
   const expiration = Math.floor(Date.now() / 1000) + 3600; // 1 hour
-  const payload = `${sub.pdf_object_key}:${expiration}`;
+  const payload = `${sub.pdf_r2_key}:${expiration}`;
   const signature = await createHMAC(payload, context.env.PDF_SIGNING_SECRET);
-  const downloadToken = btoa(JSON.stringify({ key: sub.pdf_object_key, exp: expiration, sig: signature }));
+  const downloadToken = btoa(JSON.stringify({ key: sub.pdf_r2_key, exp: expiration, sig: signature }));
 
   const dataHtml = Object.entries(data).map(([k, v]) => `
     <div class="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
@@ -44,8 +44,8 @@ export async function onRequestGet(context) {
           <h3 class="text-lg leading-6 font-medium text-gray-900">Submitted Data</h3>
           <p class="mt-1 max-w-2xl text-sm text-gray-500">Date: ${new Date(sub.created_at).toLocaleString()}</p>
         </div>
-        ${sub.pdf_object_key ? `
-          <a href="/api/pdf/${downloadToken}" target="_blank" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700">Download PDF</a>
+        ${sub.pdf_r2_key ? `
+          <a href="/admin/submissions/${sub.id}/pdf" target="_blank" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700">Download / Print PDF</a>
         ` : ''}
       </div>
       <div class="border-t border-gray-200 px-4 py-5 sm:p-0">
