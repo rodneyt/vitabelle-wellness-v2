@@ -115,7 +115,11 @@ export async function onRequestPost(context) {
     let pdf_r2_key = null;
     let pdfHash = null;
     if (typeof generateConsentPDF === 'function') {
-      const pdfBytes = await generateConsentPDF(legalBody, fields, signature_png);
+      const auditData = {
+        ip: ip,
+        userAgent: request.headers.get('user-agent') || 'Unknown'
+      };
+      const pdfBytes = await generateConsentPDF(templateId, fields, signature_png, auditData);
       pdfHash = await sha256(pdfBytes);
       
       pdf_r2_key = crypto.randomUUID() + '.pdf';
@@ -193,7 +197,7 @@ export async function onRequestPost(context) {
 
   } catch (error) {
     console.error('Submission error:', error);
-    return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
+    return new Response(JSON.stringify({ error: `Internal Server Error: ${error.message}\n${error.stack}` }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
