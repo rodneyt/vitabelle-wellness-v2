@@ -45,7 +45,7 @@ export async function hashPassword(password) {
     {
       name: 'PBKDF2',
       salt: salt,
-      iterations: 600000,
+      iterations: 100000,
       hash: 'SHA-256'
     },
     passwordKey,
@@ -80,7 +80,7 @@ export async function verifyPassword(password, storedHash) {
     {
       name: 'PBKDF2',
       salt: salt,
-      iterations: 600000,
+      iterations: 100000,
       hash: 'SHA-256'
     },
     passwordKey,
