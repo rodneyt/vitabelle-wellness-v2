@@ -39,44 +39,48 @@ export async function onRequestGet(context) {
 }
 
 export async function onRequestPost(context) {
-  const formData = await context.request.formData();
-  const username = formData.get('username');
-  const password = formData.get('password');
-  const totp = formData.get('totp');
+  try {
+    const formData = await context.request.formData();
+    const username = formData.get('username');
+    const password = formData.get('password');
+    const totp = formData.get('totp');
 
-  if (!username || !password || !totp) {
-    return new Response(html('', 'Missing fields'), { headers: { 'Content-Type': 'text/html' } });
-  }
-
-  const admin = await context.env.DB.prepare('SELECT * FROM admins WHERE username = ?').bind(username).first();
-  if (!admin) {
-    return new Response(html('', 'Invalid credentials'), { headers: { 'Content-Type': 'text/html' } });
-  }
-
-  const isValidPassword = await verifyPassword(password, admin.password_hash);
-  if (!isValidPassword) {
-    return new Response(html('', 'Invalid credentials'), { headers: { 'Content-Type': 'text/html' } });
-  }
-
-  const encObj = JSON.parse(admin.totp_secret_enc);
-  const totpSecret = await decryptAESGCM(encObj.ciphertext, encObj.iv, context.env.ENCRYPTION_KEY);
-  const isValidTOTP = await verifyTOTP(totp, totpSecret);
-  if (!isValidTOTP) {
-    return new Response(html('', 'Invalid TOTP code'), { headers: { 'Content-Type': 'text/html' } });
-  }
-
-  const sessionId = crypto.randomUUID();
-  const expiresAt = Math.floor(Date.now() / 1000) + (60 * 60 * 24); // 24 hours
-
-  await context.env.DB.prepare('INSERT INTO sessions (session_id, admin_id, expires_at) VALUES (?, ?, ?)')
-    .bind(sessionId, admin.id, expiresAt)
-    .run();
-
-  return new Response('', {
-    status: 302,
-    headers: {
-      'Location': '/admin/',
-      'Set-Cookie': `session_id=${sessionId}; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400`
+    if (!username || !password || !totp) {
+      return new Response(html('', 'Missing fields'), { headers: { 'Content-Type': 'text/html' } });
     }
-  });
+
+    const admin = await context.env.DB.prepare('SELECT * FROM admins WHERE username = ?').bind(username).first();
+    if (!admin) {
+      return new Response(html('', 'Invalid credentials'), { headers: { 'Content-Type': 'text/html' } });
+    }
+
+    const isValidPassword = await verifyPassword(password, admin.password_hash);
+    if (!isValidPassword) {
+      return new Response(html('', 'Invalid credentials'), { headers: { 'Content-Type': 'text/html' } });
+    }
+
+    const encObj = JSON.parse(admin.totp_secret_enc);
+    const totpSecret = await decryptAESGCM(encObj.ciphertext, encObj.iv, context.env.ENCRYPTION_KEY);
+    const isValidTOTP = await verifyTOTP(totp, totpSecret);
+    if (!isValidTOTP) {
+      return new Response(html('', 'Invalid TOTP code'), { headers: { 'Content-Type': 'text/html' } });
+    }
+
+    const sessionId = crypto.randomUUID();
+    const expiresAt = Math.floor(Date.now() / 1000) + (60 * 60 * 24); // 24 hours
+
+    await context.env.DB.prepare('INSERT INTO sessions (session_id, admin_id, expires_at) VALUES (?, ?, ?)')
+      .bind(sessionId, admin.id, expiresAt)
+      .run();
+
+    return new Response('', {
+      status: 302,
+      headers: {
+        'Location': '/admin/',
+        'Set-Cookie': `session_id=${sessionId}; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400`
+      }
+    });
+  } catch (err) {
+    return new Response(html('', `Server Error: ${err.message}\n${err.stack}`), { headers: { 'Content-Type': 'text/html' }, status: 500 });
+  }
 }
