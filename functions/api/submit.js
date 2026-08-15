@@ -33,8 +33,8 @@ export async function onRequestPost(context) {
     
     // Rate Limit Check
     if (typeof checkRateLimit === 'function') {
-      const isAllowed = await checkRateLimit(env.DB, ip);
-      if (!isAllowed) {
+      const rateLimitResult = await checkRateLimit(env.DB, ip, '/api/submit', 5);
+      if (!rateLimitResult.allowed) {
         return new Response(JSON.stringify({ error: 'Too many requests. Please try again later.' }), {
           status: 429,
           headers: { 'Content-Type': 'application/json' }
