@@ -20,7 +20,7 @@ export async function onRequest(context) {
     }
 
     // Look up template by id
-    const templateQuery = `SELECT id, slug, current_version_id FROM templates WHERE id = ?`;
+    const templateQuery = `SELECT id, slug, name, current_version_id FROM templates WHERE id = ?`;
     const templateResult = await env.DB.prepare(templateQuery).bind(linkResult.template_id).first();
 
     if (!templateResult || !templateResult.current_version_id) {
@@ -45,7 +45,7 @@ export async function onRequest(context) {
     }
 
     // Note: We pass the TOKEN to the HTML, not the slug.
-    const html = renderHTML(token, templateResult.title, templateResult.slug, legalBody, fieldsSchema, env.TURNSTILE_SITE_KEY);
+    const html = renderHTML(token, templateResult.name, templateResult.slug, legalBody, fieldsSchema, env.TURNSTILE_SITE_KEY);
     return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html;charset=UTF-8' } });
 
   } catch (error) {
@@ -175,9 +175,6 @@ function renderHTML(token, title, slug, legalBody, fieldsSchema, turnstileSiteKe
                     <p class="text-gray-800 text-justify mb-8">Al firmar a continuación, confirmo que se me ha explicado la terapia, incluido su uso previsto, los posibles riesgos, las limitaciones y las alternativas. He tenido la oportunidad de hacer preguntas y doy mi consentimiento voluntario para recibir el tratamiento.</p>
                     <div class="border border-gray-300 rounded-md bg-white mb-2 no-print">
                         <canvas id="signaturePad" class="w-full h-48 rounded-md touch-none" style="touch-action: none;"></canvas>
-                    </div>
-                    <div class="print-only mt-16 pt-2 border-t border-black w-64 ml-auto text-center font-medium">
-                        Firma del paciente
                     </div>
                 </div>
                 
