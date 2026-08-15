@@ -15,7 +15,9 @@ export async function onRequestGet(context) {
     let name = 'Unknown';
     try {
       if (sub.field_data_enc && sub.encryption_iv) {
-        const dataStr = await decryptAESGCM(sub.field_data_enc, sub.encryption_iv, context.env.ENCRYPTION_KEY);
+        const ivParts = sub.encryption_iv.split(':');
+        const fieldsIv = ivParts[0];
+        const dataStr = await decryptAESGCM(sub.field_data_enc, fieldsIv, context.env.ENCRYPTION_KEY);
         const data = JSON.parse(dataStr);
         name = data.name || (data.firstName ? data.firstName + ' ' + data.lastName : null) || data.patient_full_name || data.patient_name || 'Unknown';
       }
