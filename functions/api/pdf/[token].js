@@ -1,4 +1,4 @@
-import { verifyHMAC } from '../../_shared/crypto.js';
+import { createHMAC } from '../../_shared/crypto.js';
 
 export async function onRequestGet(context) {
   const token = context.params.token;
@@ -18,7 +18,7 @@ export async function onRequestGet(context) {
   }
 
   const dataToVerify = `${key}:${exp}`;
-  const isValid = await verifyHMAC(dataToVerify, sig, context.env.URL_SIGN_KEY);
+  const isValid = (await createHMAC(dataToVerify, context.env.PDF_SIGNING_SECRET)) === sig;
 
   if (!isValid) {
     return new Response('Invalid signature', { status: 403 });

@@ -1,4 +1,4 @@
-import { decryptAESGCM, signHMAC } from '../../_shared/crypto.js';
+import { decryptAESGCM, createHMAC } from '../../_shared/crypto.js';
 import { layout } from '../templates/index.js';
 
 export async function onRequestGet(context) {
@@ -20,7 +20,7 @@ export async function onRequestGet(context) {
 
   const expiration = Math.floor(Date.now() / 1000) + 3600; // 1 hour
   const payload = `${sub.pdf_object_key}:${expiration}`;
-  const signature = await signHMAC(payload, context.env.URL_SIGN_KEY);
+  const signature = await createHMAC(payload, context.env.PDF_SIGNING_SECRET);
   const downloadToken = btoa(JSON.stringify({ key: sub.pdf_object_key, exp: expiration, sig: signature }));
 
   const dataHtml = Object.entries(data).map(([k, v]) => `

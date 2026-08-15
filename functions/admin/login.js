@@ -1,4 +1,4 @@
-import { generatePBKDF2 } from '../_shared/crypto.js';
+import { verifyPassword, decryptAESGCM } from '../_shared/crypto.js';
 import { verifyTOTP } from '../_shared/totp.js';
 
 function html(body, error = '') {
@@ -53,12 +53,14 @@ export async function onRequestPost(context) {
     return new Response(html('', 'Invalid credentials'), { headers: { 'Content-Type': 'text/html' } });
   }
 
-  const hashHex = await generatePBKDF2(password, admin.salt);
-  if (hashHex !== admin.password_hash) {
+  const isValidPassword = await verifyPassword(password, admin.password_hash);
+  if (!isValidPassword) {
     return new Response(html('', 'Invalid credentials'), { headers: { 'Content-Type': 'text/html' } });
   }
 
-  const isValidTOTP = verifyTOTP(admin.totp_secret, totp);
+  const encObj = JSON.parse(admin.totp_secret_enc);
+  const totpSecret = await decryptAESGCM(encObj.ciphertext, encObj.iv, context.env.ENCRYPTION_KEY);
+  const isValidTOTP = await verifyTOTP(totp, totpSecret);
   if (!isValidTOTP) {
     return new Response(html('', 'Invalid TOTP code'), { headers: { 'Content-Type': 'text/html' } });
   }
