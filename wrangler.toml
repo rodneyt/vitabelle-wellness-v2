@@ -18,7 +18,7 @@ bucket_name = "vitabelle-pdfs"
 [vars]
 TURNSTILE_SITE_KEY = "0x4AAAAAAEQ-Qyl-k2RiqjIr"
 BUSINESS_NAME = "Vita Belle Wellness"
-SITE_URL = "https://vitabellewellness.com"
+SITE_URL = "https://vitabellemiami.com"
 
 # Estos van en `wrangler secret put`, NO en el archivo:
 # ENCRYPTION_KEY (base64, 256-bit)
