@@ -112,13 +112,12 @@ export async function onRequestPost(context) {
     }
 
     // Generate PDF
+    const userAgent = request.headers.get('user-agent') || 'Unknown';
+    const auditData = { ip, userAgent };
+
     let pdf_r2_key = null;
     let pdfHash = null;
     if (typeof generateConsentPDF === 'function') {
-      const auditData = {
-        ip: ip,
-        userAgent: request.headers.get('user-agent') || 'Unknown'
-      };
       const pdfBytes = await generateConsentPDF(templateId, fields, signature_png, auditData);
       pdfHash = await sha256(pdfBytes);
       
@@ -149,7 +148,7 @@ export async function onRequestPost(context) {
     // Fix for schema mismatch
     const submissionId = crypto.randomUUID();
     const combinedIv = `${fieldsIv}:${sigIv}`;
-    const userAgentHash = await sha256(new TextEncoder().encode(auditData.userAgent));
+    const userAgentHash = await sha256(new TextEncoder().encode(userAgent));
     const ipHash = await sha256(new TextEncoder().encode(ip));
     
     // Ensure no variables are undefined (D1 throws type error for undefined)
