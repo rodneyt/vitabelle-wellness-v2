@@ -28,7 +28,7 @@ export async function onRequest(context) {
         }
     }
 
-    const html = renderHTML(slug, legalBody, fieldsSchema, env.TURNSTILE_SITE_KEY);
+    const html = renderHTML(slug, templateResult.title, legalBody, fieldsSchema, env.TURNSTILE_SITE_KEY);
     return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html;charset=UTF-8' } });
 
   } catch (error) {
@@ -55,13 +55,31 @@ function render404() {
 </html>`;
 }
 
-function renderHTML(slug, legalBody, fieldsSchema, turnstileSiteKey) {
+function renderHTML(slug, title, legalBody, fieldsSchema, turnstileSiteKey) {
   // Generate form fields from schema
   const fieldsHTML = (Array.isArray(fieldsSchema) ? fieldsSchema : []).map(field => {
+    const requiredStr = field.required ? ' *' : '';
+    const reqAttr = field.required ? 'required' : '';
+    
+    if (field.type === 'checkbox') {
+      return `
+        <div class="flex items-start">
+          <div class="flex items-center h-5">
+            <input id="${field.name}" name="${field.name}" type="checkbox" ${reqAttr} class="focus:ring-pink-500 h-4 w-4 text-pink-600 border-gray-300 rounded">
+          </div>
+          <div class="ml-3 text-sm">
+            <label for="${field.name}" class="font-medium text-gray-700">${field.label}<span class="text-red-500">${requiredStr}</span></label>
+          </div>
+        </div>
+      `;
+    }
+    
     return `
-      <div class="mb-4">
-        <label for="${field.name}" class="block text-sm font-medium text-gray-700 mb-1">${field.label} ${field.required ? '<span class="text-red-500">*</span>' : ''}</label>
-        <input type="${field.type || 'text'}" id="${field.name}" name="${field.name}" ${field.required ? 'required' : ''} class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+      <div>
+        <label for="${field.name}" class="block text-sm font-medium text-gray-700">${field.label}<span class="text-red-500">${requiredStr}</span></label>
+        <div class="mt-1">
+          <input type="${field.type}" id="${field.name}" name="${field.name}" ${reqAttr} class="shadow-sm focus:ring-pink-500 focus:border-pink-500 block w-full sm:text-sm border-gray-300 rounded-md">
+        </div>
       </div>
     `;
   }).join('');
@@ -71,35 +89,71 @@ function renderHTML(slug, legalBody, fieldsSchema, turnstileSiteKey) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Consent Form - Vita Belle Wellness</title>
+    <title>${title} - Vita Belle Wellness</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@500&family=Playfair+Display:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <style>
+      .prose h2, .prose h3 {
+        font-family: 'Playfair Display', serif;
+        text-transform: uppercase;
+        background-color: #fbdbe2;
+        display: inline-block;
+        padding: 6px 16px;
+        margin-top: 2.5rem;
+        margin-bottom: 1.5rem;
+        color: #1e1b18;
+        letter-spacing: 0.05em;
+        font-size: 1.25rem;
+        font-weight: 600;
+        border-radius: 4px;
+      }
+      .prose p { margin-bottom: 1rem; line-height: 1.6; }
+      .cursive-subtitle { font-family: 'Dancing Script', cursive; }
+      .playfair-title { font-family: 'Playfair Display', serif; }
+    </style>
 </head>
 <body class="bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-3xl mx-auto bg-white p-8 rounded-lg shadow">
+    <div class="max-w-3xl mx-auto bg-white p-8 rounded-lg shadow-xl print-container">
         
         <form id="consentForm" class="space-y-6">
             <input type="hidden" name="slug" value="${slug}">
             
-            <div id="document-to-print">
-                <h1 class="text-2xl font-bold text-center mb-6">Vita Belle Wellness</h1>
+            <div id="document-to-print" class="px-8 py-4 bg-white">
+                <div class="text-center mb-10">
+                    <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuCoWT3y7hI8OgYqWYAkGGLGUhoHx4WJFrGe_3Xbfrjv34HvM9aCIoxf9c0Bb3izQmfmH7OV-rpRH5UqRMF9W71btkgCFhp_JQt52rjpZxFHsJjQ7DFWex_aMDYCxeiq001D1eIgCq7-uCe_n79-aQX0T3fjUdcEu1xC45SC6QsAOiIu2r3YhlgveN0nrEK-z676vp1WhDgqF9jfZo8PQzjKcbR8vNU5JgYBrNUQxyEdP7E2hcxB8l7f8Mn3q8Nm4J4taA" alt="Vita Belle Wellness Logo" class="mx-auto h-32 w-32 rounded-full border-2 border-[#735a36] shadow-sm mb-6">
+                    <h1 class="text-4xl font-bold tracking-widest text-[#1e1b18] uppercase playfair-title mb-2">${title}</h1>
+                    <p class="text-3xl text-gray-800 cursive-subtitle mt-[-10px]">Consentimiento informado</p>
+                </div>
                 
-                <div class="prose max-w-none mb-8 text-gray-700 bg-gray-50 p-6 rounded-md border border-gray-200">
+                <div class="prose max-w-none mb-12 text-gray-800 text-justify">
                     ${legalBody}
                 </div>
                 
-                <div class="bg-gray-50 p-6 rounded-md border border-gray-200 mb-6">
-                    <h2 class="text-lg font-medium text-gray-900 mb-4">Patient Information</h2>
-                    ${fieldsHTML}
+                <div class="mb-10">
+                    <h2 class="playfair-title text-xl font-bold uppercase bg-[#fbdbe2] inline-block px-4 py-2 rounded mb-6">RECONOCIMIENTOS DEL PACIENTE</h2>
+                    <div class="space-y-4">
+                        ${fieldsHTML}
+                    </div>
                 </div>
 
-                <div class="bg-gray-50 p-6 rounded-md border border-gray-200 mb-6">
-                    <h2 class="text-lg font-medium text-gray-900 mb-4">Signature</h2>
-                    <div class="border border-gray-300 rounded-md bg-white">
+                <div class="mb-8">
+                    <h2 class="playfair-title text-xl font-bold uppercase bg-[#fbdbe2] inline-block px-4 py-2 rounded mb-6">CONFIRMACIÓN DEL CONSENTIMIENTO</h2>
+                    <p class="text-gray-800 text-justify mb-8">Al firmar a continuación, confirmo que se me ha explicado la terapia, incluido su uso previsto, los posibles riesgos, las limitaciones y las alternativas. He tenido la oportunidad de hacer preguntas y doy mi consentimiento voluntario para recibir el tratamiento.</p>
+                    <div class="border border-gray-300 rounded-md bg-white mb-2 no-print">
                         <canvas id="signaturePad" class="w-full h-48 rounded-md touch-none" style="touch-action: none;"></canvas>
                     </div>
+                    <div class="print-only mt-16 pt-2 border-t border-black w-64 ml-auto text-center font-medium">
+                        Firma del paciente
+                    </div>
+                </div>
+                
+                <div class="text-center font-bold text-sm text-gray-400 mt-12 playfair-title">
+                    VitaBelle Wellness
                 </div>
             </div>
 
@@ -125,7 +179,6 @@ function renderHTML(slug, legalBody, fieldsSchema, turnstileSiteKey) {
         document.addEventListener('DOMContentLoaded', () => {
             const canvas = document.getElementById('signaturePad');
             
-            // Adjust canvas coordinate space to match CSS display size
             function resizeCanvas() {
                 const ratio =  Math.max(window.devicePixelRatio || 1, 1);
                 canvas.width = canvas.offsetWidth * ratio;
@@ -169,7 +222,6 @@ function renderHTML(slug, legalBody, fieldsSchema, turnstileSiteKey) {
                 submitBtn.innerHTML = '<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Generating PDF...';
 
                 try {
-                    // Bake input values into DOM so html2canvas captures them
                     const printArea = document.getElementById('document-to-print');
                     printArea.querySelectorAll('input, textarea').forEach(input => {
                         if (input.type === 'checkbox' || input.type === 'radio') {
@@ -179,22 +231,32 @@ function renderHTML(slug, legalBody, fieldsSchema, turnstileSiteKey) {
                             input.setAttribute('value', input.value);
                         }
                     });
+                    
+                    const formData = new FormData(e.target);
+                    const data = Object.fromEntries(formData.entries());
+
+                    // Inject E-Signature Audit Block
+                    const auditDiv = document.createElement('div');
+                    auditDiv.id = 'temp-audit-block';
+                    auditDiv.className = 'mt-16 pt-8 border-t border-gray-300 text-sm text-gray-600';
+                    auditDiv.innerHTML = '<h3 class="font-bold text-lg mb-4 text-black playfair-title">E-Signature Audit Trail</h3><p><strong>Signed by:</strong> ' + (data.patient_full_name || 'Patient') + '</p><p><strong>Timestamp:</strong> ' + new Date().toLocaleString("en-US", { timeZone: "America/New_York" }) + ' ET</p><p><strong>Device:</strong> ' + navigator.userAgent + '</p><p><strong>Document ID:</strong> ' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substr(2, 5).toUpperCase() + '</p>';
+                    printArea.appendChild(auditDiv);
 
                     // Generate PDF locally
                     const opt = {
                         margin: 0.5,
                         filename: 'document.pdf',
                         image: { type: 'jpeg', quality: 0.98 },
-                        html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+                        html2canvas: { scale: 1.5, useCORS: true, scrollY: 0 },
                         pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
                         jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
                     };
                     const pdfBase64 = await html2pdf().from(printArea).set(opt).outputPdf('datauristring');
+                    
+                    // Cleanup audit block after snapshot
+                    printArea.removeChild(auditDiv);
 
                     submitBtn.innerHTML = '<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Sending Securely...';
-
-                    const formData = new FormData(e.target);
-                    const data = Object.fromEntries(formData.entries());
                     
                     data.signature_svg = signaturePad.toDataURL('image/svg+xml');
                     data.signature_png = signaturePad.toDataURL('image/png');
