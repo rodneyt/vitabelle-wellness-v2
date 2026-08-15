@@ -4,7 +4,7 @@ export async function onRequest(context) {
   
   try {
     // Look up template by slug
-    const templateQuery = `SELECT id, name, current_version_id FROM templates WHERE slug = ?`;
+    const templateQuery = `SELECT id, title, current_version_id FROM templates WHERE slug = ?`;
     const templateResult = await env.DB.prepare(templateQuery).bind(slug).first();
 
     if (!templateResult || !templateResult.current_version_id) {
@@ -28,7 +28,7 @@ export async function onRequest(context) {
         }
     }
 
-    const html = renderHTML(slug, templateResult.name, legalBody, fieldsSchema, env.TURNSTILE_SITE_KEY);
+    const html = renderHTML(slug, templateResult.title, legalBody, fieldsSchema, env.TURNSTILE_SITE_KEY);
     return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html;charset=UTF-8' } });
 
   } catch (error) {

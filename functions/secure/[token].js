@@ -20,7 +20,7 @@ export async function onRequest(context) {
     }
 
     // Look up template by id
-    const templateQuery = `SELECT id, slug, name, current_version_id FROM templates WHERE id = ?`;
+    const templateQuery = `SELECT id, slug, title, current_version_id FROM templates WHERE id = ?`;
     const templateResult = await env.DB.prepare(templateQuery).bind(linkResult.template_id).first();
 
     if (!templateResult || !templateResult.current_version_id) {
@@ -45,7 +45,7 @@ export async function onRequest(context) {
     }
 
     // Note: We pass the TOKEN to the HTML, not the slug.
-    const html = renderHTML(token, templateResult.name, templateResult.slug, legalBody, fieldsSchema, env.TURNSTILE_SITE_KEY);
+    const html = renderHTML(token, templateResult.title, templateResult.slug, legalBody, fieldsSchema, env.TURNSTILE_SITE_KEY);
     return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html;charset=UTF-8' } });
 
   } catch (error) {

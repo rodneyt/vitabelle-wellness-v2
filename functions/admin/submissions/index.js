@@ -3,7 +3,7 @@ import { layout } from '../templates/index.js';
 
 export async function onRequestGet(context) {
   const query = `
-    SELECT s.*, t.name as template_name 
+    SELECT s.*, t.title as template_name 
     FROM submissions s 
     LEFT JOIN templates t ON s.template_id = t.id 
     ORDER BY s.created_at DESC
@@ -24,9 +24,9 @@ export async function onRequestGet(context) {
     }
 
     listHtml += `
-      <li class="px-4 py-4 sm:px-6 flex justify-between items-center submission-item" data-search="\${name.toLowerCase()} \${(sub.template_name || '').toLowerCase()}">
+      <li class="px-4 py-4 sm:px-6 flex justify-between items-center submission-item" data-search="${name.toLowerCase()} ${(sub.template_name || '').toLowerCase()}">
         <div>
-          <p class="text-sm font-medium text-indigo-600 truncate">\${name} <span class="text-xs text-gray-400 font-normal ml-2">— \${sub.template_name || 'Unknown Template'}</span></p>
+          <p class="text-sm font-medium text-indigo-600 truncate">${name} <span class="text-xs text-gray-400 font-normal ml-2">— ${sub.template_name || 'Unknown Template'}</span></p>
           <p class="text-sm text-gray-500">${new Date(sub.created_at).toLocaleString("en-US", { timeZone: "America/New_York", timeZoneName: 'short' })}</p>
         </div>
         <div>
