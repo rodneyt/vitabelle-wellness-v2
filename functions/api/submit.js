@@ -1,6 +1,7 @@
 import { checkRateLimit } from '../_shared/rate-limiter.js';
 import { generateConsentPDF } from '../_shared/pdf-generator.js';
 import { encryptAESGCM } from '../_shared/crypto.js';
+import { logAudit } from '../_shared/audit.js';
 
 async function verifyTurnstile(token, secret, ip) {
   const formData = new FormData();
@@ -183,18 +184,22 @@ export async function onRequestPost(context) {
 
     // Insert Audit Log
     try {
-      // Trying to import audit log if exists, else just write to DB
-      const { logAudit } = await import('../../src/audit.js').catch(() => ({ logAudit: null }));
-      if (typeof logAudit === 'function') {
-          await logAudit(env.DB, 'SUBMISSION_CREATED', { submissionId, templateId });
-      } else {
-          const auditQuery = `INSERT INTO audit_log (action, details, created_at) VALUES (?, ?, datetime('now'))`;
-          await env.DB.prepare(auditQuery).bind('SUBMISSION_CREATED', JSON.stringify({ submissionId, templateId })).run();
-      }
+      const auditId = crypto.randomUUID();
+      const insertAuditQuery = `
+        INSERT INTO audit_log (id, admin_id, action, resource_type, resource_id, ip_address, user_agent, metadata, created_at)
+        VALUES (?, NULL, ?, ?, ?, ?, ?, ?, datetime('now'))
+      `;
+      await env.DB.prepare(insertAuditQuery).bind(
+        auditId,
+        'SUBMISSION_CREATED',
+        'submission',
+        submissionId,
+        ip,
+        userAgent,
+        JSON.stringify({ templateId })
+      ).run();
     } catch (e) {
-       // fallback audit log
-       const auditQuery = `INSERT INTO audit_log (action, details, created_at) VALUES (?, ?, datetime('now'))`;
-       await env.DB.prepare(auditQuery).bind('SUBMISSION_CREATED', JSON.stringify({ submissionId, templateId })).run();
+       console.error('Audit log failed:', e);
     }
 
     return new Response(JSON.stringify({ success: true, id: submissionId }), {
