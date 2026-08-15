@@ -46,6 +46,10 @@ export async function onRequestPost(context) {
     return new Response('Already setup', { status: 403 });
   }
 
+  if (!context.env.ENCRYPTION_KEY) {
+    return new Response(html('<h2>Configuration Error</h2><p class="text-red-600">The <b>ENCRYPTION_KEY</b> is missing in Cloudflare Secrets.</p>'), { headers: { 'Content-Type': 'text/html' }, status: 500 });
+  }
+
   const formData = await context.request.formData();
   const username = formData.get('username');
   const password = formData.get('password');
@@ -54,7 +58,7 @@ export async function onRequestPost(context) {
 
   const hashHex = await hashPassword(password);
 
-  const totpSecret = generateTOTPSecret();
+  const totpSecret = await generateTOTPSecret();
   const totpUri = generateTOTPUri(totpSecret, username, 'VitaBelle');
 
   const encSecret = await encryptAESGCM(totpSecret, context.env.ENCRYPTION_KEY);
