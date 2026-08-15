@@ -7,14 +7,14 @@ directory = "./"
 [[d1_databases]]
 binding = "DB"
 database_name = "vitabelle-crm"
-database_id = "00000000-0000-0000-0000-000000000000" # Update this after running `wrangler d1 create vitabelle-crm`
+database_id = "fc7fe4dc-36ba-48f5-b613-01b4b3b3f9e6"
 
 [[r2_buckets]]
 binding = "PDF_BUCKET"
 bucket_name = "vitabelle-pdfs"
 
 [vars]
-TURNSTILE_SITE_KEY = "0x4AAAAAAABBBBBBBBBBBBBB" # Placeholder, update with real key
+TURNSTILE_SITE_KEY = "0x4AAAAAAEQ-Qyl-k2RiqjIr"
 BUSINESS_NAME = "Vita Belle Wellness"
 SITE_URL = "https://vitabellewellness.com"
 
