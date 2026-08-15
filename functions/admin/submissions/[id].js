@@ -42,7 +42,7 @@ export async function onRequestGet(context) {
       <div class="px-4 py-5 sm:px-6 flex justify-between items-center">
         <div>
           <h3 class="text-lg leading-6 font-medium text-gray-900">Submitted Data</h3>
-          <p class="mt-1 max-w-2xl text-sm text-gray-500">Date: ${new Date(sub.created_at).toLocaleString()}</p>
+          <p class="mt-1 max-w-2xl text-sm text-gray-500">Date: ${new Date(sub.created_at).toLocaleString("en-US", { timeZone: 'America/New_York' })}</p>
         </div>
         ${sub.pdf_r2_key ? `
           <a href="/admin/submissions/${sub.id}/pdf" target="_blank" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700">Download / Print PDF</a>

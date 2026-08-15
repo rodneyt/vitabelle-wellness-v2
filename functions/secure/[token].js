@@ -91,6 +91,7 @@ function renderHTML(token, slug, legalBody, fieldsSchema, turnstileSiteKey) {
     <title>Secure Document - Vita Belle Wellness</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <style>
       @media print {
@@ -108,32 +109,35 @@ function renderHTML(token, slug, legalBody, fieldsSchema, turnstileSiteKey) {
     </div>
 
     <div class="max-w-3xl mx-auto bg-white p-8 rounded-lg shadow print-container">
-        <h1 class="text-2xl font-bold text-center mb-6">Vita Belle Wellness</h1>
         
-        <div class="prose max-w-none mb-8 text-gray-700 bg-gray-50 p-6 rounded-md border border-gray-200 overflow-y-auto print-container">
-            ${legalBody}
-        </div>
-
         <form id="consentForm" class="space-y-6">
             <input type="hidden" name="token" value="${token}">
             
-            <div class="bg-gray-50 p-6 rounded-md border border-gray-200 print-container">
-                <h2 class="text-lg font-medium text-gray-900 mb-4">Patient Information</h2>
-                ${fieldsHTML}
+            <div id="document-to-print">
+                <h1 class="text-2xl font-bold text-center mb-6">Vita Belle Wellness</h1>
+                
+                <div class="prose max-w-none mb-8 text-gray-700 bg-gray-50 p-6 rounded-md border border-gray-200 print-container">
+                    ${legalBody}
+                </div>
+
+                <div class="bg-gray-50 p-6 rounded-md border border-gray-200 print-container mb-6">
+                    <h2 class="text-lg font-medium text-gray-900 mb-4">Patient Information</h2>
+                    ${fieldsHTML}
+                </div>
+
+                <div class="bg-gray-50 p-6 rounded-md border border-gray-200 print-container mb-6">
+                    <h2 class="text-lg font-medium text-gray-900 mb-4">Signature</h2>
+                    <div class="border border-gray-300 rounded-md bg-white no-print">
+                        <canvas id="signaturePad" class="w-full h-48 rounded-md touch-none" style="touch-action: none;"></canvas>
+                    </div>
+                    <div class="print-only mt-8 border-t border-black pt-2 w-64 text-center">
+                        Signature
+                    </div>
+                </div>
             </div>
 
-            <div class="bg-gray-50 p-6 rounded-md border border-gray-200 print-container">
-                <h2 class="text-lg font-medium text-gray-900 mb-4">Signature</h2>
-                <div class="border border-gray-300 rounded-md bg-white no-print">
-                    <canvas id="signaturePad" class="w-full h-48 rounded-md touch-none" style="touch-action: none;"></canvas>
-                </div>
-                <div class="mt-2 flex justify-end no-print">
-                    <button type="button" id="clearSignature" class="text-sm text-gray-600 hover:text-gray-900 underline">Clear Signature</button>
-                </div>
-                
-                <div class="print-only mt-8 border-t border-black pt-2 w-64 text-center">
-                    Signature
-                </div>
+            <div class="mt-2 flex justify-end no-print">
+                <button type="button" id="clearSignature" class="text-sm text-gray-600 hover:text-gray-900 underline">Clear Signature</button>
             </div>
 
             <div class="cf-turnstile no-print" data-sitekey="${turnstileSiteKey}" data-callback="javascriptCallback"></div>
@@ -194,16 +198,27 @@ function renderHTML(token, slug, legalBody, fieldsSchema, turnstileSiteKey) {
                 }
 
                 submitBtn.disabled = true;
-                submitBtn.innerHTML = '<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Processing...';
-
-                const formData = new FormData(e.target);
-                const data = Object.fromEntries(formData.entries());
-                
-                // Add signature data
-                data.signature_svg = signaturePad.toDataURL('image/svg+xml');
-                data.signature_png = signaturePad.toDataURL('image/png');
+                submitBtn.innerHTML = '<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Generating PDF...';
 
                 try {
+                    // Generate PDF locally
+                    const opt = {
+                        margin: 0.5,
+                        filename: 'document.pdf',
+                        image: { type: 'jpeg', quality: 0.98 },
+                        html2canvas: { scale: 2, useCORS: true },
+                        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+                    };
+                    const pdfBase64 = await html2pdf().from(document.getElementById('document-to-print')).set(opt).outputPdf('datauristring');
+
+                    submitBtn.innerHTML = '<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Sending Securely...';
+
+                    const formData = new FormData(e.target);
+                    const data = Object.fromEntries(formData.entries());
+                    
+                    data.signature_svg = signaturePad.toDataURL('image/svg+xml');
+                    data.signature_png = signaturePad.toDataURL('image/png');
+                    data.pdf_base64 = pdfBase64;
                     const response = await fetch('/api/submit', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },

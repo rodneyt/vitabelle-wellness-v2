@@ -1,5 +1,4 @@
 import { checkRateLimit } from '../_shared/rate-limiter.js';
-import { generateConsentPDF } from '../_shared/pdf-generator.js';
 import { encryptAESGCM } from '../_shared/crypto.js';
 import { logAudit } from '../_shared/audit.js';
 
@@ -44,7 +43,7 @@ export async function onRequestPost(context) {
     }
 
     const data = await request.json();
-    const { slug, token, 'cf-turnstile-response': turnstileToken, signature_svg, signature_png, ...fields } = data;
+    const { slug, token, 'cf-turnstile-response': turnstileToken, signature_svg, signature_png, pdf_base64, ...fields } = data;
 
     if (!(slug || token) || !turnstileToken || !signature_svg) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
@@ -118,13 +117,18 @@ export async function onRequestPost(context) {
 
     let pdf_r2_key = null;
     let pdfHash = null;
-    if (typeof generateConsentPDF === 'function') {
-      const pdfBytes = await generateConsentPDF(templateId, fields, signature_png, auditData);
-      pdfHash = await sha256(pdfBytes);
+    
+    if (pdf_base64) {
+      const b64Data = pdf_base64.replace(/^data:application\/pdf;base64,/, '');
+      const binaryString = atob(b64Data);
+      const pdfBytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        pdfBytes[i] = binaryString.charCodeAt(i);
+      }
       
+      pdfHash = await sha256(pdfBytes);
       pdf_r2_key = crypto.randomUUID() + '.pdf';
       
-      // Upload PDF to R2
       if (env.PDF_BUCKET) {
         await env.PDF_BUCKET.put(pdf_r2_key, pdfBytes);
       }
