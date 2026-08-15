@@ -1,8 +1,7 @@
 name = "vitabelle-wellness-v2"
 compatibility_date = "2024-09-23"
 
-[assets]
-directory = "./"
+pages_build_output_dir = "./"
 
 [[d1_databases]]
 binding = "DB"
