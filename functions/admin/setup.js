@@ -41,40 +41,44 @@ export async function onRequestGet(context) {
 }
 
 export async function onRequestPost(context) {
-  const existing = await context.env.DB.prepare('SELECT id FROM admins LIMIT 1').first();
-  if (existing) {
-    return new Response('Already setup', { status: 403 });
+  try {
+    const existing = await context.env.DB.prepare('SELECT id FROM admins LIMIT 1').first();
+    if (existing) {
+      return new Response('Already setup', { status: 403 });
+    }
+
+    if (!context.env.ENCRYPTION_KEY) {
+      return new Response(html('<h2>Configuration Error</h2><p class="text-red-600">The <b>ENCRYPTION_KEY</b> is missing in Cloudflare Secrets.</p>'), { headers: { 'Content-Type': 'text/html' }, status: 500 });
+    }
+
+    const formData = await context.request.formData();
+    const username = formData.get('username');
+    const password = formData.get('password');
+
+    if (!username || !password) return new Response('Missing fields', { status: 400 });
+
+    const hashHex = await hashPassword(password);
+
+    const totpSecret = await generateTOTPSecret();
+    const totpUri = generateTOTPUri(totpSecret, username, 'VitaBelle');
+
+    const encSecret = await encryptAESGCM(totpSecret, context.env.ENCRYPTION_KEY);
+    await context.env.DB.prepare('INSERT INTO admins (id, username, password_hash, totp_secret_enc) VALUES (?, ?, ?, ?)')
+      .bind(crypto.randomUUID(), username, hashHex, JSON.stringify(encSecret))
+      .run();
+
+    return new Response(html(`
+      <h1 class="text-2xl font-bold mb-6 text-center">Setup Complete</h1>
+      <p class="mb-4 text-center text-sm text-gray-600">Please add this TOTP secret to your authenticator app.</p>
+      <div class="bg-gray-100 p-4 rounded text-center break-all font-mono text-sm mb-4">
+        ${totpSecret}
+      </div>
+      <div class="text-center mb-6">
+        <p class="text-xs text-gray-500 break-all">URI: ${totpUri}</p>
+      </div>
+      <a href="/admin/login" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">Go to Login</a>
+    `), { headers: { 'Content-Type': 'text/html' } });
+  } catch (err) {
+    return new Response(html(`<h2>Server Error</h2><pre class="text-red-600 text-xs text-left overflow-auto whitespace-pre-wrap">${err.message}\n${err.stack}</pre>`), { headers: { 'Content-Type': 'text/html' }, status: 500 });
   }
-
-  if (!context.env.ENCRYPTION_KEY) {
-    return new Response(html('<h2>Configuration Error</h2><p class="text-red-600">The <b>ENCRYPTION_KEY</b> is missing in Cloudflare Secrets.</p>'), { headers: { 'Content-Type': 'text/html' }, status: 500 });
-  }
-
-  const formData = await context.request.formData();
-  const username = formData.get('username');
-  const password = formData.get('password');
-
-  if (!username || !password) return new Response('Missing fields', { status: 400 });
-
-  const hashHex = await hashPassword(password);
-
-  const totpSecret = await generateTOTPSecret();
-  const totpUri = generateTOTPUri(totpSecret, username, 'VitaBelle');
-
-  const encSecret = await encryptAESGCM(totpSecret, context.env.ENCRYPTION_KEY);
-  await context.env.DB.prepare('INSERT INTO admins (id, username, password_hash, totp_secret_enc) VALUES (?, ?, ?, ?)')
-    .bind(crypto.randomUUID(), username, hashHex, JSON.stringify(encSecret))
-    .run();
-
-  return new Response(html(`
-    <h1 class="text-2xl font-bold mb-6 text-center">Setup Complete</h1>
-    <p class="mb-4 text-center text-sm text-gray-600">Please add this TOTP secret to your authenticator app.</p>
-    <div class="bg-gray-100 p-4 rounded text-center break-all font-mono text-sm mb-4">
-      ${totpSecret}
-    </div>
-    <div class="text-center mb-6">
-      <p class="text-xs text-gray-500 break-all">URI: ${totpUri}</p>
-    </div>
-    <a href="/admin/login" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">Go to Login</a>
-  `), { headers: { 'Content-Type': 'text/html' } });
 }
