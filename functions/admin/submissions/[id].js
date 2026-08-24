@@ -117,7 +117,7 @@ function renderProviderHTML(sub, tv, data, patientSigSvg, patientAudit, turnstil
 
           <!-- Patient Audit Trail -->
           ${patientAudit ? `
-          <div class="mt-8 pt-8 border-t border-gray-300 text-sm text-gray-600">
+          <div class="mt-8 pt-8 border-t border-gray-300 text-sm text-gray-600" style="page-break-inside: avoid;">
             <h3 class="font-bold text-lg mb-4 text-black playfair-title">Signer 1 Audit Trail</h3>
             <p><strong>Signed by:</strong> ${data.patient_full_name || data.provider_name || data.full_name || data.name || data.signer_name || 'Signer 1'}</p>
             <p><strong>Timestamp:</strong> ${new Date(patientAudit.created_at + 'Z').toLocaleString("en-US", { timeZone: "America/New_York" })} ET</p>
@@ -206,12 +206,12 @@ function renderProviderHTML(sub, tv, data, patientSigSvg, patientAudit, turnstil
           
           // Inject Audit Trail 
           const signerName = s2Data.s2_provider_name || s2Data.s2_name || s2Data.s2_full_name || 'Signer 2';
-          providerHtml += '<div class="mt-16 pt-8 border-t border-gray-300 text-sm text-gray-600">' +
+          providerHtml += '<div class="mt-16 pt-8 border-t border-gray-300 text-sm text-gray-600" style="page-break-inside: avoid;">' +
               '<h3 class="font-bold text-lg mb-4 text-black playfair-title">Signer 2 Audit Trail</h3>' +
               '<p><strong>Signed by:</strong> ' + signerName + '</p>' +
               '<p><strong>Timestamp:</strong> ' + new Date().toLocaleString("en-US", { timeZone: "America/New_York" }) + ' ET</p>' +
               '<p><strong>Device:</strong> ' + navigator.userAgent + '</p>' +
-              '<p><strong>Document ID:</strong> ${sub.id}</p>' +
+              '<p><strong>Document ID:</strong> ' + '${sub.id}' + '</p>' +
             '</div>';
 
           document.getElementById('provider-data-injection').innerHTML = providerHtml;
