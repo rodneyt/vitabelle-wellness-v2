@@ -50,42 +50,27 @@ function renderProviderHTML(sub, tv, data, patientSigSvg, patientAudit, turnstil
       <dd class="mt-1 text-sm text-gray-900">${v}</dd>
     </div>
   `).join('');
-
   return `
-    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       
       <!-- Right Side: Provider Signing Form -->
       <div class="bg-white p-6 rounded-lg shadow order-1 md:order-2 h-fit">
         <h2 class="text-xl font-bold mb-4">Complete Document</h2>
-        <form id="providerForm" class="space-y-6">
-          ${providerFieldsHTML}
+        
+        <div class="space-y-4">
+          <p class="text-gray-600 text-sm">Este documento requiere su firma como proveedor para ser completado oficialmente.</p>
+          <p class="text-gray-600 text-sm mb-6">Al hacer clic en el botón, se abrirá una ventana en pantalla completa diseñada para recolectar su firma y generar el PDF final de manera óptima, evitando problemas de recortes visuales.</p>
           
-          <div class="mt-6">
-            <h3 class="text-lg font-medium text-gray-900 mb-2">Provider Signature *</h3>
-            <div class="border border-gray-300 rounded-md bg-gray-50">
-              <canvas id="signaturePad" class="w-full h-40 rounded-md touch-none" style="touch-action: none;"></canvas>
-            </div>
-            <div class="flex justify-between mt-2">
-              <button type="button" id="clearBtn" class="text-sm text-gray-500 hover:text-gray-700">Clear</button>
-            </div>
-          </div>
+          <a href="/admin/provider-sign/${sub.id}" target="_blank" class="block w-full text-center bg-[#735a36] text-white px-4 py-3 rounded-md hover:bg-[#594321] transition-colors font-medium">
+            Abrir Portal de Firma
+          </a>
 
-          <div class="cf-turnstile mt-4" data-sitekey="${turnstileSiteKey}"></div>
-
-          <div id="submitButtons" class="pt-4 border-t border-gray-200 mt-6 flex justify-between">
-            <button type="button" onclick="rejectSubmission()" class="text-red-600 hover:text-red-800 text-sm font-medium">Reject / Void</button>
-            <button type="button" id="submitBtn" class="bg-[#735a36] text-white px-4 py-2 rounded-md hover:bg-[#594321] transition-colors">Sign & Complete</button>
+          <div class="mt-8 pt-6 border-t border-gray-200">
+              <button type="button" onclick="rejectSubmission()" class="text-red-600 hover:text-red-800 text-sm font-medium w-full text-left">
+                Rechazar / Anular Documento
+              </button>
           </div>
-          
-          <div id="loadingIndicator" class="hidden text-center text-gray-600 py-4">
-            <svg class="animate-spin h-5 w-5 mx-auto mb-2 text-[#735a36]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-            <p>Processing and generating final PDF...</p>
-          </div>
-        </form>
+        </div>
       </div>
 
       <!-- Left Side: Live PDF Preview -->
@@ -110,12 +95,6 @@ function renderProviderHTML(sub, tv, data, patientSigSvg, patientAudit, turnstil
               </div>
           </div>
 
-          <div class="mb-8 mt-12">
-              <div class="mb-2 no-print">
-                  <img src="${patientSigSvg}" alt="Patient Signature" style="max-height: 150px; width: auto;" />
-              </div>
-          </div>
-
           <!-- Patient Audit Trail -->
           ${patientAudit ? `
           <div class="mt-8 pt-8 border-t border-gray-300 text-sm text-gray-600" style="page-break-inside: avoid; display: inline-block; width: 100%;">
@@ -127,144 +106,26 @@ function renderProviderHTML(sub, tv, data, patientSigSvg, patientAudit, turnstil
             <p><strong>Document ID:</strong> ${sub.id}</p>
           </div>
           ` : ''}
-
-          <!-- Placeholder for Provider Data to be injected on submit -->
-          <div id="provider-data-injection" class="mt-8 pt-8"></div>
         </div>
       </div>
     </div>
 
     <script>
-      const canvas = document.getElementById('signaturePad');
-      const signaturePad = new SignaturePad(canvas, { backgroundColor: 'rgb(255, 255, 255)' });
-
-      function resizeCanvas() {
-          const ratio = Math.max(window.devicePixelRatio || 1, 1);
-          canvas.width = canvas.offsetWidth * ratio;
-          canvas.height = canvas.offsetHeight * ratio;
-          canvas.getContext("2d").scale(ratio, ratio);
-          signaturePad.clear();
-      }
-
-      window.addEventListener("resize", resizeCanvas);
-      resizeCanvas();
-
-      document.getElementById('clearBtn').addEventListener('click', () => signaturePad.clear());
-
       async function rejectSubmission() {
-        const reason = prompt("Ingrese el motivo de anulación:");
-        if (reason) {
-          try {
-            const res = await fetch('/api/provider-submit', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ submission_id: '${sub.id}', reject: true, reason })
-            });
-            if (res.ok) window.location.reload();
-            else alert("Error al anular.");
-          } catch(e) { alert("Error: " + e.message); }
-        }
-      }
-
-      document.getElementById('submitBtn').addEventListener('click', async () => {
-          if (signaturePad.isEmpty()) {
-              alert("Por favor provea su firma antes de completar el documento.");
-              return;
-          }
-          
-          const form = document.getElementById('providerForm');
-          if (!form.checkValidity()) {
-              form.reportValidity();
-              return;
-          }
-
-          document.getElementById('submitButtons').classList.add('hidden');
-          document.getElementById('loadingIndicator').classList.remove('hidden');
-
-          const formData = new FormData(form);
-          const s2Data = Object.fromEntries(formData.entries());
-          s2Data.submission_id = '${sub.id}';
-          
-          const svgData = signaturePad.toDataURL('image/svg+xml');
-          s2Data.provider_signature_svg = svgData;
-
-          // Pass fieldsSchema to the frontend JS to map labels
-          const fieldsSchemaJson = ${JSON.stringify(fieldsSchema)};
-          function getJsFieldLabel(key) {
-            const field = fieldsSchemaJson.find(f => f.name === key);
-            return field && field.label ? field.label : key;
-          }
-
-          // Inject Provider Data into the PDF preview before snapshot
-          let providerHtml = '<div class="space-y-4" style="page-break-inside: avoid; display: inline-block; width: 100%; border-top: 1px solid #d1d5db; padding-top: 2rem;">';
-          for (const key in s2Data) {
-            if (key !== 'submission_id' && key !== 'provider_signature_svg' && key !== 'cf-turnstile-response') {
-              providerHtml += '<p><strong>' + getJsFieldLabel(key) + ':</strong> ' + s2Data[key] + '</p>';
-            }
-          }
-          providerHtml += '</div>';
-          providerHtml += '<div class="mt-4" style="page-break-inside: avoid; display: inline-block; width: 100%;"><img src="' + svgData + '" style="max-height: 150px; width: auto;" /></div>';
-          
-          // Inject Audit Trail 
-          const signerName = s2Data.s2_provider_name || s2Data.s2_name || s2Data.s2_full_name || 'Signer 2';
-          providerHtml += '<div class="html2pdf__page-break"></div>' +
-              '<div class="mt-8 pt-8 border-t border-gray-300 text-sm text-gray-600" style="page-break-inside: avoid; display: inline-block; width: 100%;">' +
-              '<h3 class="font-bold text-lg mb-4 text-black playfair-title">Signer 2 Audit Trail</h3>' +
-              '<p><strong>Signed by:</strong> ' + signerName + '</p>' +
-              '<p><strong>Timestamp:</strong> ' + new Date().toLocaleString("en-US", { timeZone: "America/New_York" }) + ' ET</p>' +
-              '<p><strong>Device:</strong> ' + navigator.userAgent + '</p>' +
-              '<p><strong>Document ID:</strong> ' + '${sub.id}' + '</p>' +
-            '</div>';
-
-          document.getElementById('provider-data-injection').innerHTML = providerHtml;
-
-          const element = document.getElementById('document-to-print');
-          
-          // Clone the element and append to body to avoid CSS Grid/overflow clipping issues in html2canvas
-          const clone = element.cloneNode(true);
-          clone.style.position = 'absolute';
-          clone.style.top = '0';
-          clone.style.left = '0';
-          clone.style.width = '800px';
-          clone.style.zIndex = '-9999';
-          document.body.appendChild(clone);
-          
-          try {
-              const pdfBlobUrl = await html2pdf().set({
-                  margin: 0.5,
-                  filename: 'document.pdf',
-                  image: { type: 'jpeg', quality: 0.98 },
-                  html2canvas: { scale: 1.5, useCORS: true, scrollY: 0, windowWidth: 800 },
-                  pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
-                  jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-              }).from(clone).outputPdf('datauristring');
-              
-              document.body.removeChild(clone);
-
-              s2Data.pdf_base64 = pdfBlobUrl;
-
-              const response = await fetch('/api/provider-submit', {
+          const reason = prompt("Razón del rechazo (opcional):");
+          if (reason !== null) {
+              const res = await fetch('/api/provider-submit', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(s2Data)
+                  body: JSON.stringify({ submission_id: '${sub.id}', reject: true, reason })
               });
-
-              if (response.ok) {
-                  alert("Documento completado exitosamente.");
+              if (res.ok) {
                   window.location.reload();
               } else {
-                  const errInfo = await response.json();
-                  alert("Error al guardar: " + (errInfo.error || "Desconocido"));
-                  window.location.reload();
+                  alert("Error al anular");
               }
-          } catch (e) {
-              if (document.body.contains(clone)) {
-                  document.body.removeChild(clone);
-              }
-              alert("Error generando PDF: " + e.message);
-              window.location.reload();
           }
-      });
+      }
     </script>
   `;
 }
