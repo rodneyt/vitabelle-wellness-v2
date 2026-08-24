@@ -1,4 +1,4 @@
-import { layout } from '../../_shared/layout.js';
+import { layout } from '../templates/index.js';
 import { decryptAESGCM } from '../../_shared/crypto.js';
 
 export async function onRequestGet(context) {
