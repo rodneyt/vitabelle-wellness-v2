@@ -18,7 +18,7 @@ export async function onRequestGet(context) {
     if (sub.field_data_enc && sub.encryption_iv) {
       const ivParts = sub.encryption_iv.split(':');
       const fieldsIv = ivParts[0];
-      const dataStr = await decryptAESGCM(sub.field_data_enc, context.env.ENCRYPTION_KEY, fieldsIv);
+      const dataStr = await decryptAESGCM(sub.field_data_enc, fieldsIv, context.env.ENCRYPTION_KEY);
       data = JSON.parse(dataStr);
     }
   } catch (e) {
