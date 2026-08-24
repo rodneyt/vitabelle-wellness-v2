@@ -13,6 +13,7 @@ export async function onRequestGet(context) {
   const patientAudit = await context.env.DB.prepare('SELECT * FROM audit_log WHERE resource_id = ? AND action = ? ORDER BY created_at ASC LIMIT 1').bind(id, 'SUBMISSION_CREATED').first();
 
   let data = {};
+  let patientSigSvg = '';
   
   try {
     if (sub.field_data_enc && sub.encryption_iv) {
@@ -20,6 +21,13 @@ export async function onRequestGet(context) {
       const fieldsIv = ivParts[0];
       const dataStr = await decryptAESGCM(sub.field_data_enc, fieldsIv, context.env.ENCRYPTION_KEY);
       data = JSON.parse(dataStr);
+      
+      const sigIv = ivParts[1] || 'unencrypted';
+      if (sigIv !== 'unencrypted' && sub.signature_svg_enc) {
+        patientSigSvg = await decryptAESGCM(sub.signature_svg_enc, sigIv, context.env.ENCRYPTION_KEY);
+      } else {
+        patientSigSvg = sub.signature_svg_enc || '';
+      }
     }
   } catch (e) {
     console.error("Decryption failed:", e);
@@ -90,6 +98,13 @@ export async function onRequestGet(context) {
                         ${Object.entries(data).map(([k, v]) => '<p><strong>' + getFieldLabel(k) + ':</strong> ' + v + '</p>').join('')}
                     </div>
                 </div>
+
+                <!-- Patient Signature Image -->
+                ${patientSigSvg ? `
+                <div class="mb-8 mt-4">
+                    <img src="${patientSigSvg}" alt="Patient Signature" style="max-height: 150px; width: auto;" />
+                </div>
+                ` : ''}
 
                 <!-- Patient Audit Trail -->
                 ${patientAudit ? `
