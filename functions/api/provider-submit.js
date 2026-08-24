@@ -1,4 +1,5 @@
 import { encryptAESGCM, decryptAESGCM } from '../_shared/crypto.js';
+import { checkRateLimit } from '../_shared/rate-limiter.js';
 
 // SHA-256 Hashing
 async function sha256(data) {
