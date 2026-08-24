@@ -57,30 +57,30 @@ export async function onRequestGet(context) {
             <div id="document-to-print" class="px-8 py-4 bg-white">
                 <div class="text-center mb-10">
                     <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuCoWT3y7hI8OgYqWYAkGGLGUhoHx4WJFrGe_3Xbfrjv34HvM9aCIoxf9c0Bb3izQmfmH7OV-rpRH5UqRMF9W71btkgCFhp_JQt52rjpZxFHsJjQ7DFWex_aMDYCxeiq001D1eIgCq7-uCe_n79-aQX0T3fjUdcEu1xC45SC6QsAOiIu2r3YhlgveN0nrEK-z676vp1WhDgqF9jfZo8PQzjKcbR8vNU5JgYBrNUQxyEdP7E2hcxB8l7f8Mn3q8Nm4J4taA" alt="Vita Belle Wellness Logo" class="mx-auto h-32 w-32 rounded-full border-2 border-[#735a36] shadow-sm mb-6">
-                    <h1 class="text-4xl font-bold tracking-widest text-[#1e1b18] uppercase playfair-title mb-2">\${tv.title || 'Document'}</h1>
+                    <h1 class="text-4xl font-bold tracking-widest text-[#1e1b18] uppercase playfair-title mb-2">${tv.title || 'Document'}</h1>
                 </div>
                 
                 <div class="prose max-w-none mb-12 text-gray-800 text-justify">
-                    \${tv.legal_body}
+                    ${tv.legal_body}
                 </div>
                 
                 <div class="mb-10">
                     <div class="space-y-4">
-                        \${Object.entries(data).map(([k, v]) => '<p><strong>' + getFieldLabel(k) + ':</strong> ' + v + '</p>').join('')}
+                        ${Object.entries(data).map(([k, v]) => '<p><strong>' + getFieldLabel(k) + ':</strong> ' + v + '</p>').join('')}
                     </div>
                 </div>
 
                 <!-- Patient Audit Trail -->
-                \${patientAudit ? \`
+                ${patientAudit ? `
                 <div class="mt-8 pt-8 border-t border-gray-300 text-sm text-gray-600" style="page-break-inside: avoid; display: inline-block; width: 100%;">
                   <h3 class="font-bold text-lg mb-4 text-black playfair-title">Signer 1 Audit Trail</h3>
-                  <p><strong>Signed by:</strong> \${data.patient_full_name || data.provider_name || data.full_name || data.name || data.signer_name || 'Signer 1'}</p>
-                  <p><strong>Timestamp:</strong> \${new Date(patientAudit.created_at + 'Z').toLocaleString("en-US", { timeZone: "America/New_York" })} ET</p>
-                  <p><strong>Device:</strong> \${patientAudit.user_agent}</p>
-                  <p><strong>IP:</strong> \${patientAudit.ip_address}</p>
-                  <p><strong>Document ID:</strong> \${sub.id}</p>
+                  <p><strong>Signed by:</strong> ${data.patient_full_name || data.provider_name || data.full_name || data.name || data.signer_name || 'Signer 1'}</p>
+                  <p><strong>Timestamp:</strong> ${new Date(patientAudit.created_at + 'Z').toLocaleString("en-US", { timeZone: "America/New_York" })} ET</p>
+                  <p><strong>Device:</strong> ${patientAudit.user_agent}</p>
+                  <p><strong>IP:</strong> ${patientAudit.ip_address}</p>
+                  <p><strong>Document ID:</strong> ${sub.id}</p>
                 </div>
-                \` : ''}
+                ` : ''}
 
                 <!-- Placeholder for Provider Data to be injected on submit -->
                 <div id="provider-data-injection" class="mt-8 pt-8"></div>
@@ -102,7 +102,7 @@ export async function onRequestGet(context) {
                 </div>
 
                 <div class="mt-6">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">\${providerSignatureField ? providerSignatureField.label : 'Provider Signature'} *</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">${providerSignatureField ? providerSignatureField.label : 'Provider Signature'} *</label>
                     <div class="border border-gray-300 rounded-md bg-white">
                         <canvas id="signaturePad" class="w-full h-40 rounded-md touch-none" style="touch-action: none;"></canvas>
                     </div>
@@ -112,7 +112,7 @@ export async function onRequestGet(context) {
                 </div>
 
                 <div id="submitButtons" class="pt-4 mt-6 flex justify-between">
-                    <a href="/admin/submissions/\${sub.id}" class="text-gray-600 hover:text-gray-800 text-sm font-medium">Cancel / Back</a>
+                    <a href="/admin/submissions/${sub.id}" class="text-gray-600 hover:text-gray-800 text-sm font-medium">Cancel / Back</a>
                     <button type="button" id="submitBtn" class="bg-[#735a36] text-white px-6 py-2 rounded-md hover:bg-[#594321] transition-colors shadow">Sign & Finalize</button>
                 </div>
                 
