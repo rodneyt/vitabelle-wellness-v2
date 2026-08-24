@@ -1,11 +1,16 @@
 import { layout } from '../templates/index.js';
 import { decryptAESGCM, createHMAC } from '../../_shared/crypto.js';
 
-function renderProviderHTML(sub, tv, data, patientSigSvg, turnstileSiteKey) {
+function renderProviderHTML(sub, tv, data, patientSigSvg, patientAudit, turnstileSiteKey) {
   let fieldsSchema = tv.fields_schema;
   if (typeof fieldsSchema === 'string') {
     try { fieldsSchema = JSON.parse(fieldsSchema); } catch (e) { fieldsSchema = []; }
   }
+
+  const getFieldLabel = (key) => {
+    const field = (Array.isArray(fieldsSchema) ? fieldsSchema : []).find(f => f.name === key);
+    return field?.label || key;
+  };
 
   // Filter only s2_ fields for the provider to fill
   const providerFields = (Array.isArray(fieldsSchema) ? fieldsSchema : [])
@@ -100,7 +105,7 @@ function renderProviderHTML(sub, tv, data, patientSigSvg, turnstileSiteKey) {
           <!-- Submitted Patient Data -->
           <div class="mb-10">
               <div class="space-y-4">
-                  ${Object.entries(data).map(([k, v]) => '<p><strong>' + k + ':</strong> ' + v + '</p>').join('')}
+                  ${Object.entries(data).map(([k, v]) => '<p><strong>' + getFieldLabel(k) + ':</strong> ' + v + '</p>').join('')}
               </div>
           </div>
 
@@ -109,6 +114,18 @@ function renderProviderHTML(sub, tv, data, patientSigSvg, turnstileSiteKey) {
                   <img src="${patientSigSvg}" alt="Patient Signature" style="max-height: 150px; width: auto;" />
               </div>
           </div>
+
+          <!-- Patient Audit Trail -->
+          ${patientAudit ? `
+          <div class="mt-8 pt-8 border-t border-gray-300 text-sm text-gray-600">
+            <h3 class="font-bold text-lg mb-4 text-black playfair-title">Signer 1 Audit Trail</h3>
+            <p><strong>Signed by:</strong> ${data.patient_full_name || data.provider_name || data.full_name || data.name || data.signer_name || 'Signer 1'}</p>
+            <p><strong>Timestamp:</strong> ${new Date(patientAudit.created_at + 'Z').toLocaleString("en-US", { timeZone: "America/New_York" })} ET</p>
+            <p><strong>Device:</strong> ${patientAudit.user_agent}</p>
+            <p><strong>IP:</strong> ${patientAudit.ip_address}</p>
+            <p><strong>Document ID:</strong> ${sub.id}</p>
+          </div>
+          ` : ''}
 
           <!-- Placeholder for Provider Data to be injected on submit -->
           <div id="provider-data-injection" class="mt-8 border-t border-gray-300 pt-8"></div>
@@ -170,11 +187,18 @@ function renderProviderHTML(sub, tv, data, patientSigSvg, turnstileSiteKey) {
           const svgData = signaturePad.toDataURL('image/svg+xml');
           s2Data.provider_signature_svg = svgData;
 
+          // Pass fieldsSchema to the frontend JS to map labels
+          const fieldsSchemaJson = ${JSON.stringify(fieldsSchema)};
+          function getJsFieldLabel(key) {
+            const field = fieldsSchemaJson.find(f => f.name === key);
+            return field && field.label ? field.label : key;
+          }
+
           // Inject Provider Data into the PDF preview before snapshot
           let providerHtml = '<div class="space-y-4">';
           for (const key in s2Data) {
             if (key !== 'submission_id' && key !== 'provider_signature_svg' && key !== 'cf-turnstile-response') {
-              providerHtml += '<p><strong>' + key + ':</strong> ' + s2Data[key] + '</p>';
+              providerHtml += '<p><strong>' + getJsFieldLabel(key) + ':</strong> ' + s2Data[key] + '</p>';
             }
           }
           providerHtml += '</div>';
@@ -183,11 +207,11 @@ function renderProviderHTML(sub, tv, data, patientSigSvg, turnstileSiteKey) {
           // Inject Audit Trail 
           const signerName = s2Data.s2_provider_name || s2Data.s2_name || s2Data.s2_full_name || 'Signer 2';
           providerHtml += '<div class="mt-16 pt-8 border-t border-gray-300 text-sm text-gray-600">' +
-              '<h3 class="font-bold text-lg mb-4 text-black playfair-title">E-Signature Audit Trail</h3>' +
+              '<h3 class="font-bold text-lg mb-4 text-black playfair-title">Signer 2 Audit Trail</h3>' +
               '<p><strong>Signed by:</strong> ' + signerName + '</p>' +
               '<p><strong>Timestamp:</strong> ' + new Date().toLocaleString("en-US", { timeZone: "America/New_York" }) + ' ET</p>' +
               '<p><strong>Device:</strong> ' + navigator.userAgent + '</p>' +
-              '<p><strong>Document ID:</strong> ' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substr(2, 5).toUpperCase() + '</p>' +
+              '<p><strong>Document ID:</strong> ${sub.id}</p>' +
             '</div>';
 
           document.getElementById('provider-data-injection').innerHTML = providerHtml;
@@ -235,6 +259,8 @@ export async function onRequestGet(context) {
   
   if (!sub) return new Response('Not found', { status: 404 });
 
+  const patientAudit = await context.env.DB.prepare('SELECT * FROM audit_log WHERE resource_id = ? AND action = ? ORDER BY created_at ASC LIMIT 1').bind(id, 'SUBMISSION_CREATED').first();
+
   let data = {};
   let errorMsg = '';
   let patientSigSvg = '';
@@ -259,11 +285,27 @@ export async function onRequestGet(context) {
 
   if (sub.status === 'pendiente_proveedor') {
     const tv = await context.env.DB.prepare('SELECT * FROM template_versions WHERE id = ?').bind(sub.template_version_id).first();
-    const htmlContent = renderProviderHTML(sub, tv, data, patientSigSvg, context.env.TURNSTILE_SITE_KEY);
+    const htmlContent = renderProviderHTML(sub, tv, data, patientSigSvg, patientAudit, context.env.TURNSTILE_SITE_KEY);
     
     return new Response(layout(`
+      <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@500&family=Playfair+Display:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
       <style>
+        .prose h2, .prose h3 {
+          font-family: 'Playfair Display', serif;
+          text-transform: uppercase;
+          background-color: #fbdbe2;
+          display: inline-block;
+          padding: 6px 16px;
+          margin-top: 2.5rem;
+          margin-bottom: 1.5rem;
+          color: #1e1b18;
+          letter-spacing: 0.05em;
+          font-size: 1.25rem;
+          font-weight: 600;
+          border-radius: 4px;
+        }
         .prose p { margin-bottom: 1rem; line-height: 1.6; }
+        .cursive-subtitle { font-family: 'Dancing Script', cursive; }
         .playfair-title { font-family: 'Playfair Display', serif; }
       </style>
       <div class="mb-6 flex justify-between items-center">
