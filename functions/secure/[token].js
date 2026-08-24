@@ -85,7 +85,7 @@ function renderHTML(token, title, slug, legalBody, fieldsSchema, turnstileSiteKe
             <input id="${field.name}" name="${field.name}" type="checkbox" ${reqAttr} class="focus:ring-pink-500 h-4 w-4 text-pink-600 border-gray-300 rounded">
           </div>
           <div class="ml-3 text-sm">
-            <label for="${field.name}" class="font-medium text-gray-700">${field.label}<span class="text-red-500">${requiredStr}</span></label>
+            <label for="${field.name}" class="font-medium text-gray-700">${field.label || field.name || 'Field'}<span class="text-red-500">${requiredStr}</span></label>
           </div>
         </div>
       `;
@@ -93,7 +93,7 @@ function renderHTML(token, title, slug, legalBody, fieldsSchema, turnstileSiteKe
     
     return `
       <div>
-        <label for="${field.name}" class="block text-sm font-medium text-gray-700">${field.label}<span class="text-red-500">${requiredStr}</span></label>
+        <label for="${field.name}" class="block text-sm font-medium text-gray-700">${field.label || field.name || 'Field'}<span class="text-red-500">${requiredStr}</span></label>
         <div class="mt-1">
           <input type="${field.type}" id="${field.name}" name="${field.name}" ${reqAttr} class="shadow-sm focus:ring-pink-500 focus:border-pink-500 block w-full sm:text-sm border-gray-300 rounded-md">
         </div>
