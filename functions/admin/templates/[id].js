@@ -243,8 +243,29 @@ export async function onRequestGet(context) {
 
       function updatePreview() {
         const clientFields = fields.filter(f => !f.name?.startsWith('s2_') && f.type !== 'config' && !f.hidden);
+        const legalBody = document.getElementById('legalBodyInput').value;
         
-        let html = '<div class="space-y-4">';
+        let html = '';
+        
+        // Document header with logo and title
+        html += '<div class="text-center mb-6">';
+        html += '<img src="https://lh3.googleusercontent.com/aida-public/AB6AXuCoWT3y7hI8OgYqWYAkGGLGUhoHx4WJFrGe_3Xbfrjv34HvM9aCIoxf9c0Bb3izQmfmH7OV-rpRH5UqRMF9W71btkgCFhp_JQt52rjpZxFHsJjQ7DFWex_aMDYCxeiq001D1eIgCq7-uCe_n79-aQX0T3fjUdcEu1xC45SC6QsAOiIu2r3YhlgveN0nrEK-z676vp1WhDgqF9jfZo8PQzjKcbR8vNU5JgYBrNUQxyEdP7E2hcxB8l7f8Mn3q8Nm4J4taA" alt="Logo" class="mx-auto h-20 w-20 rounded-full border-2 border-[#735a36] shadow-sm mb-3">';
+        html += '<h1 class="text-xl font-bold tracking-widest text-[#1e1b18] uppercase" style="font-family: Playfair Display, serif;">${template.title}</h1>';
+        html += '</div>';
+        
+        // Legal body
+        if (legalBody.trim()) {
+          html += '<div class="prose max-w-none mb-6 text-gray-800 text-justify text-sm" style="max-height: 300px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: white;">';
+          html += legalBody;
+          html += '</div>';
+        }
+        
+        // Divider
+        html += '<div class="border-t border-gray-300 my-4"></div>';
+        html += '<p class="text-xs text-gray-400 uppercase tracking-wider mb-3">Form Fields</p>';
+        
+        // Form fields
+        html += '<div class="space-y-4">';
         clientFields.forEach(f => {
           if (f.type === 'signature') {
             html += \`
@@ -282,6 +303,7 @@ export async function onRequestGet(context) {
             \`;
           }
         });
+        html += '</div>';
 
         // Show hidden fields indicator
         const hiddenFields = fields.filter(f => f.hidden);
@@ -299,7 +321,6 @@ export async function onRequestGet(context) {
           html += '</div>';
         }
 
-        html += '</div>';
         preview.innerHTML = html;
       }
 
