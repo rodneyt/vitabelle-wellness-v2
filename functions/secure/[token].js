@@ -262,7 +262,8 @@ function renderHTML(token, title, slug, legalBody, fieldsSchema, turnstileSiteKe
                     const auditDiv = document.createElement('div');
                     auditDiv.id = 'temp-audit-block';
                     auditDiv.className = 'mt-16 pt-8 border-t border-gray-300 text-sm text-gray-600';
-                    auditDiv.innerHTML = '<h3 class="font-bold text-lg mb-4 text-black playfair-title">E-Signature Audit Trail</h3><p><strong>Signed by:</strong> ' + (data.patient_full_name || 'Patient') + '</p><p><strong>Timestamp:</strong> ' + new Date().toLocaleString("en-US", { timeZone: "America/New_York" }) + ' ET</p><p><strong>Device:</strong> ' + navigator.userAgent + '</p><p><strong>Document ID:</strong> ' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substr(2, 5).toUpperCase() + '</p>';
+                    const signerName = data.patient_full_name || data.provider_name || data.full_name || data.name || data.signer_name || 'Signer';
+                    auditDiv.innerHTML = '<h3 class="font-bold text-lg mb-4 text-black playfair-title">E-Signature Audit Trail</h3><p><strong>Signed by:</strong> ' + signerName + '</p><p><strong>Timestamp:</strong> ' + new Date().toLocaleString("en-US", { timeZone: "America/New_York" }) + ' ET</p><p><strong>Device:</strong> ' + navigator.userAgent + '</p><p><strong>Document ID:</strong> ' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substr(2, 5).toUpperCase() + '</p>';
                     printArea.appendChild(auditDiv);
 
                     // Generate PDF locally
