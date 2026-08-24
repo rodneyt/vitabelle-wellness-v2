@@ -156,7 +156,6 @@ function renderHTML(token, title, slug, legalBody, fieldsSchema, turnstileSiteKe
                 <div class="text-center mb-10">
                     <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuCoWT3y7hI8OgYqWYAkGGLGUhoHx4WJFrGe_3Xbfrjv34HvM9aCIoxf9c0Bb3izQmfmH7OV-rpRH5UqRMF9W71btkgCFhp_JQt52rjpZxFHsJjQ7DFWex_aMDYCxeiq001D1eIgCq7-uCe_n79-aQX0T3fjUdcEu1xC45SC6QsAOiIu2r3YhlgveN0nrEK-z676vp1WhDgqF9jfZo8PQzjKcbR8vNU5JgYBrNUQxyEdP7E2hcxB8l7f8Mn3q8Nm4J4taA" alt="Vita Belle Wellness Logo" class="mx-auto h-32 w-32 rounded-full border-2 border-[#735a36] shadow-sm mb-6">
                     <h1 class="text-4xl font-bold tracking-widest text-[#1e1b18] uppercase playfair-title mb-2">${title}</h1>
-                    <p class="text-3xl text-gray-800 cursive-subtitle mt-[-10px]">Consentimiento informado</p>
                 </div>
                 
                 <div class="prose max-w-none mb-12 text-gray-800 text-justify">
@@ -164,15 +163,12 @@ function renderHTML(token, title, slug, legalBody, fieldsSchema, turnstileSiteKe
                 </div>
 
                 <div class="mb-10">
-                    <h2 class="playfair-title text-xl font-bold uppercase bg-[#fbdbe2] inline-block px-4 py-2 rounded mb-6">RECONOCIMIENTOS DEL PACIENTE</h2>
                     <div class="space-y-4">
                         ${fieldsHTML}
                     </div>
                 </div>
 
-                <div class="mb-8">
-                    <h2 class="playfair-title text-xl font-bold uppercase bg-[#fbdbe2] inline-block px-4 py-2 rounded mb-6">CONFIRMACIÓN DEL CONSENTIMIENTO</h2>
-                    <p class="text-gray-800 text-justify mb-8">Al firmar a continuación, confirmo que se me ha explicado la terapia, incluido su uso previsto, los posibles riesgos, las limitaciones y las alternativas. He tenido la oportunidad de hacer preguntas y doy mi consentimiento voluntario para recibir el tratamiento.</p>
+                <div class="mb-8 mt-12">
                     <div class="border border-gray-300 rounded-md bg-white mb-2 no-print">
                         <canvas id="signaturePad" class="w-full h-48 rounded-md touch-none" style="touch-action: none;"></canvas>
                     </div>
