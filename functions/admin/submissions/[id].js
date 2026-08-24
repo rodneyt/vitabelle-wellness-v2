@@ -220,16 +220,27 @@ function renderProviderHTML(sub, tv, data, patientSigSvg, patientAudit, turnstil
 
           const element = document.getElementById('document-to-print');
           
+          // Clone the element and append to body to avoid CSS Grid/overflow clipping issues in html2canvas
+          const clone = element.cloneNode(true);
+          clone.style.position = 'absolute';
+          clone.style.top = '0';
+          clone.style.left = '0';
+          clone.style.width = '800px';
+          clone.style.zIndex = '-9999';
+          document.body.appendChild(clone);
+          
           try {
               const pdfBlobUrl = await html2pdf().set({
                   margin: 0.5,
                   filename: 'document.pdf',
                   image: { type: 'jpeg', quality: 0.98 },
-                  html2canvas: { scale: 1.5, useCORS: true, scrollY: 0 },
+                  html2canvas: { scale: 1.5, useCORS: true, scrollY: 0, windowWidth: 800 },
                   pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
                   jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-              }).from(element).outputPdf('datauristring');
+              }).from(clone).outputPdf('datauristring');
               
+              document.body.removeChild(clone);
+
               s2Data.pdf_base64 = pdfBlobUrl;
 
               const response = await fetch('/api/provider-submit', {
@@ -247,6 +258,9 @@ function renderProviderHTML(sub, tv, data, patientSigSvg, patientAudit, turnstil
                   window.location.reload();
               }
           } catch (e) {
+              if (document.body.contains(clone)) {
+                  document.body.removeChild(clone);
+              }
               alert("Error generando PDF: " + e.message);
               window.location.reload();
           }
