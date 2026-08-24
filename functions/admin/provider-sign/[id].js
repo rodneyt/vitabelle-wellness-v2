@@ -203,26 +203,32 @@ export async function onRequestGet(context) {
           const auditTimestamp = new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
           const auditDevice = navigator.userAgent;
           const auditDocId = '${sub.id}';
-          providerHtml += '<div class="html2pdf__page-break"></div>' +
-              '<div style="margin-top: 2rem; padding-top: 2rem; border-top: 2px solid #d1d5db; font-size: 14px; color: #111827; page-break-inside: avoid; display: block; width: 100%;">' +
+          providerHtml += 
+              '<div style="margin-top: 2rem; padding-top: 2rem; padding-bottom: 1rem; border-top: 2px solid #d1d5db; font-size: 14px; color: #111827; page-break-inside: avoid;">' +
               '<h3 style="font-weight: bold; font-size: 18px; margin-bottom: 16px; color: #000;">Signer 2 Audit Trail</h3>' +
               '<p style="margin-bottom: 6px;"><strong>Signed by:</strong> ' + signerName + '</p>' +
               '<p style="margin-bottom: 6px;"><strong>Timestamp:</strong> ' + auditTimestamp + ' ET</p>' +
               '<p style="margin-bottom: 6px;"><strong>Device:</strong> ' + auditDevice + '</p>' +
               '<p style="margin-bottom: 6px;"><strong>Document ID:</strong> ' + auditDocId + '</p>' +
             '</div>';
+          
+          // Add spacer at the end to prevent clipping
+          providerHtml += '<div style="height: 20px;"></div>';
 
           document.getElementById('provider-data-injection').innerHTML = providerHtml;
 
           const printArea = document.getElementById('document-to-print');
+          
+          // Force layout recalculation before capture
+          await new Promise(r => setTimeout(r, 500));
           
           try {
               const pdfBlobUrl = await html2pdf().set({
                   margin: 0.5,
                   filename: 'document.pdf',
                   image: { type: 'jpeg', quality: 0.98 },
-                  html2canvas: { scale: 1.5, useCORS: true, scrollY: 0 },
-                  pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+                  html2canvas: { scale: 2, useCORS: true, scrollY: 0, height: printArea.scrollHeight },
+                  pagebreak: { mode: ['css', 'legacy'] },
                   jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
               }).from(printArea).outputPdf('datauristring');
               
