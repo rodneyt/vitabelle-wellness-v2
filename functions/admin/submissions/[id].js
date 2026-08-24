@@ -91,7 +91,7 @@ function renderProviderHTML(sub, tv, data, patientSigSvg, patientAudit, turnstil
       <!-- Left Side: Live PDF Preview -->
       <div class="bg-gray-100 p-8 rounded-lg shadow order-2 md:order-1 overflow-x-auto">
         <h2 class="text-xl font-bold mb-4 text-gray-700">Document Preview</h2>
-        <div id="document-to-print" class="bg-white p-10 shadow-sm min-w-[800px] text-justify relative">
+        <div id="document-to-print" class="px-8 py-4 bg-white shadow-sm text-justify relative max-w-3xl mx-auto">
           
           <div class="text-center mb-10">
             <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuCoWT3y7hI8OgYqWYAkGGLGUhoHx4WJFrGe_3Xbfrjv34HvM9aCIoxf9c0Bb3izQmfmH7OV-rpRH5UqRMF9W71btkgCFhp_JQt52rjpZxFHsJjQ7DFWex_aMDYCxeiq001D1eIgCq7-uCe_n79-aQX0T3fjUdcEu1xC45SC6QsAOiIu2r3YhlgveN0nrEK-z676vp1WhDgqF9jfZo8PQzjKcbR8vNU5JgYBrNUQxyEdP7E2hcxB8l7f8Mn3q8Nm4J4taA" alt="Vita Belle Wellness Logo" class="mx-auto h-32 w-32 rounded-full border-2 border-[#735a36] shadow-sm mb-6">
@@ -284,7 +284,13 @@ export async function onRequestGet(context) {
   }
 
   if (sub.status === 'pendiente_proveedor') {
-    const tv = await context.env.DB.prepare('SELECT * FROM template_versions WHERE id = ?').bind(sub.template_version_id).first();
+    const tv = await context.env.DB.prepare(`
+      SELECT tv.*, t.title 
+      FROM template_versions tv 
+      JOIN templates t ON t.id = tv.template_id 
+      WHERE tv.id = ?
+    `).bind(sub.template_version_id).first();
+    
     const htmlContent = renderProviderHTML(sub, tv, data, patientSigSvg, patientAudit, context.env.TURNSTILE_SITE_KEY);
     
     return new Response(layout(`
