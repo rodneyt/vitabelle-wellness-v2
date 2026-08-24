@@ -1,4 +1,4 @@
-import { layout } from '../layout.js';
+import { layout } from '../templates/index.js';
 
 // Convert ArrayBuffer to Hex
 function buf2hex(buffer) {
@@ -162,13 +162,13 @@ function renderProviderHTML(sub, tv, data, patientSigSvg, turnstileSiteKey) {
           <!-- Submitted Patient Data -->
           <div class="mb-10">
               <div class="space-y-4">
-                  ${Object.entries(data).map(([k, v]) => \`<p><strong>\${k}:</strong> \${v}</p>\`).join('')}
+                  ${Object.entries(data).map(([k, v]) => '<p><strong>' + k + ':</strong> ' + v + '</p>').join('')}
               </div>
           </div>
 
           <div class="mb-8 mt-12">
               <div class="mb-2 no-print">
-                  <img src="\${patientSigSvg}" alt="Patient Signature" style="max-height: 150px; width: auto;" />
+                  <img src="${patientSigSvg}" alt="Patient Signature" style="max-height: 150px; width: auto;" />
               </div>
           </div>
 
@@ -236,7 +236,7 @@ function renderProviderHTML(sub, tv, data, patientSigSvg, turnstileSiteKey) {
           let providerHtml = '<div class="space-y-4">';
           for (const key in s2Data) {
             if (key !== 'submission_id' && key !== 'provider_signature_svg' && key !== 'cf-turnstile-response') {
-              providerHtml += \`<p><strong>\${key}:</strong> \${s2Data[key]}</p>\`;
+              providerHtml += '<p><strong>' + key + ':</strong> ' + s2Data[key] + '</p>';
             }
           }
           providerHtml += '</div>';
@@ -244,15 +244,13 @@ function renderProviderHTML(sub, tv, data, patientSigSvg, turnstileSiteKey) {
           
           // Inject Audit Trail 
           const signerName = s2Data.s2_provider_name || s2Data.s2_name || s2Data.s2_full_name || 'Signer 2';
-          providerHtml += \`
-            <div class="mt-16 pt-8 border-t border-gray-300 text-sm text-gray-600">
-              <h3 class="font-bold text-lg mb-4 text-black playfair-title">E-Signature Audit Trail</h3>
-              <p><strong>Signed by:</strong> \${signerName}</p>
-              <p><strong>Timestamp:</strong> \${new Date().toLocaleString("en-US", { timeZone: "America/New_York" })} ET</p>
-              <p><strong>Device:</strong> \${navigator.userAgent}</p>
-              <p><strong>Document ID:</strong> \${Date.now().toString(36).toUpperCase()}-\${Math.random().toString(36).substr(2, 5).toUpperCase()}</p>
-            </div>
-          \`;
+          providerHtml += '<div class="mt-16 pt-8 border-t border-gray-300 text-sm text-gray-600">' +
+              '<h3 class="font-bold text-lg mb-4 text-black playfair-title">E-Signature Audit Trail</h3>' +
+              '<p><strong>Signed by:</strong> ' + signerName + '</p>' +
+              '<p><strong>Timestamp:</strong> ' + new Date().toLocaleString("en-US", { timeZone: "America/New_York" }) + ' ET</p>' +
+              '<p><strong>Device:</strong> ' + navigator.userAgent + '</p>' +
+              '<p><strong>Document ID:</strong> ' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substr(2, 5).toUpperCase() + '</p>' +
+            '</div>';
 
           document.getElementById('provider-data-injection').innerHTML = providerHtml;
 
