@@ -108,13 +108,13 @@ export async function onRequestGet(context) {
 
                 <!-- Patient Audit Trail -->
                 ${patientAudit ? `
-                <div class="mt-8 pt-8 border-t border-gray-300 text-sm text-gray-600" style="page-break-inside: avoid; display: inline-block; width: 100%;">
-                  <h3 class="font-bold text-lg mb-4 text-black playfair-title">Signer 1 Audit Trail</h3>
-                  <p><strong>Signed by:</strong> ${data.patient_full_name || data.provider_name || data.full_name || data.name || data.signer_name || 'Signer 1'}</p>
-                  <p><strong>Timestamp:</strong> ${new Date(patientAudit.created_at + 'Z').toLocaleString("en-US", { timeZone: "America/New_York" })} ET</p>
-                  <p><strong>Device:</strong> ${patientAudit.user_agent}</p>
-                  <p><strong>IP:</strong> ${patientAudit.ip_address}</p>
-                  <p><strong>Document ID:</strong> ${sub.id}</p>
+                <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #d1d5db; font-size: 9px; color: #6b7280; line-height: 1.4; page-break-inside: avoid;">
+                  <p style="font-weight: bold; font-size: 11px; margin-bottom: 4px; color: #374151;">Signer 1 Audit Trail</p>
+                  <p style="margin: 1px 0;"><strong>Signed by:</strong> ${data.patient_full_name || data.provider_name || data.full_name || data.name || data.signer_name || 'Signer 1'}</p>
+                  <p style="margin: 1px 0;"><strong>Timestamp:</strong> ${new Date(patientAudit.created_at + 'Z').toLocaleString("en-US", { timeZone: "America/New_York" })} ET</p>
+                  <p style="margin: 1px 0;"><strong>Device:</strong> ${patientAudit.user_agent}</p>
+                  <p style="margin: 1px 0;"><strong>IP:</strong> ${patientAudit.ip_address}</p>
+                  <p style="margin: 1px 0;"><strong>Document ID:</strong> ${sub.id}</p>
                 </div>
                 ` : ''}
 
@@ -219,12 +219,12 @@ export async function onRequestGet(context) {
           const auditDevice = navigator.userAgent;
           const auditDocId = '${sub.id}';
           providerHtml += 
-              '<div style="margin-top: 2rem; padding-top: 2rem; padding-bottom: 1rem; border-top: 2px solid #d1d5db; font-size: 14px; color: #111827; page-break-inside: avoid;">' +
-              '<h3 style="font-weight: bold; font-size: 18px; margin-bottom: 16px; color: #000;">Signer 2 Audit Trail</h3>' +
-              '<p style="margin-bottom: 6px;"><strong>Signed by:</strong> ' + signerName + '</p>' +
-              '<p style="margin-bottom: 6px;"><strong>Timestamp:</strong> ' + auditTimestamp + ' ET</p>' +
-              '<p style="margin-bottom: 6px;"><strong>Device:</strong> ' + auditDevice + '</p>' +
-              '<p style="margin-bottom: 6px;"><strong>Document ID:</strong> ' + auditDocId + '</p>' +
+              '<div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #d1d5db; font-size: 9px; color: #6b7280; line-height: 1.4; page-break-inside: avoid;">' +
+              '<p style="font-weight: bold; font-size: 11px; margin-bottom: 4px; color: #374151;">Signer 2 Audit Trail</p>' +
+              '<p style="margin: 1px 0;"><strong>Signed by:</strong> ' + signerName + '</p>' +
+              '<p style="margin: 1px 0;"><strong>Timestamp:</strong> ' + auditTimestamp + ' ET</p>' +
+              '<p style="margin: 1px 0;"><strong>Device:</strong> ' + auditDevice + '</p>' +
+              '<p style="margin: 1px 0;"><strong>Document ID:</strong> ' + auditDocId + '</p>' +
             '</div>';
           
           // Add spacer at the end to prevent clipping
