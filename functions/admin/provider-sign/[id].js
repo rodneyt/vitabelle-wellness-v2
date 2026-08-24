@@ -47,6 +47,27 @@ export async function onRequestGet(context) {
   const providerSignatureField = signatureFields.length > 1 ? signatureFields[1] : null;
 
   const htmlContent = `
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@500&family=Playfair+Display:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+    <style>
+      .prose h2, .prose h3 {
+        font-family: 'Playfair Display', serif;
+        text-transform: uppercase;
+        background-color: #fbdbe2;
+        display: inline-block;
+        padding: 6px 16px;
+        margin-top: 2.5rem;
+        margin-bottom: 1.5rem;
+        color: #1e1b18;
+        letter-spacing: 0.05em;
+        font-size: 1.25rem;
+        font-weight: 600;
+        border-radius: 4px;
+      }
+      .prose p { margin-bottom: 1rem; line-height: 1.6; }
+      .cursive-subtitle { font-family: 'Dancing Script', cursive; }
+      .playfair-title { font-family: 'Playfair Display', serif; }
+    </style>
+    
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     
