@@ -56,8 +56,10 @@ function render404() {
 }
 
 function renderHTML(slug, title, legalBody, fieldsSchema, turnstileSiteKey) {
-  // Generate form fields from schema
-  const fieldsHTML = (Array.isArray(fieldsSchema) ? fieldsSchema : []).map(field => {
+  // Generate form fields from schema (hide s2_ and config fields)
+  const fieldsHTML = (Array.isArray(fieldsSchema) ? fieldsSchema : [])
+    .filter(field => !field.name?.startsWith('s2_') && field.type !== 'config')
+    .map(field => {
     const requiredStr = field.required ? ' *' : '';
     const reqAttr = field.required ? 'required' : '';
     

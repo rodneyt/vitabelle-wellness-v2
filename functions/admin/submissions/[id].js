@@ -1,5 +1,297 @@
-import { decryptAESGCM, createHMAC } from '../../_shared/crypto.js';
-import { layout } from '../templates/index.js';
+import { layout } from '../layout.js';
+
+// Convert ArrayBuffer to Hex
+function buf2hex(buffer) {
+  return [...new Uint8Array(buffer)].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+
+async function createHMAC(message, secret) {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    enc.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const signature = await crypto.subtle.sign('HMAC', key, enc.encode(message));
+  return buf2hex(signature);
+}
+
+// Convert Hex to ArrayBuffer
+function hex2buf(hexString) {
+  const bytes = new Uint8Array(Math.ceil(hexString.length / 2));
+  for (let i = 0; i < bytes.length; i++) {
+    bytes[i] = parseInt(hexString.substr(i * 2, 2), 16);
+  }
+  return bytes.buffer;
+}
+
+// Decrypt AES-GCM
+async function decryptAESGCM(encryptedHex, ivHex, secretKeyStr) {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    enc.encode(secretKeyStr),
+    { name: 'PBKDF2' },
+    false,
+    ['deriveKey']
+  );
+
+  const key = await crypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt: enc.encode('vita-belle-salt'),
+      iterations: 100000,
+      hash: 'SHA-256'
+    },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['decrypt']
+  );
+
+  const iv = hex2buf(ivHex);
+  const ciphertext = hex2buf(encryptedHex);
+
+  const decryptedBuffer = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv: new Uint8Array(iv) },
+    key,
+    ciphertext
+  );
+
+  return new TextDecoder().decode(decryptedBuffer);
+}
+
+function renderProviderHTML(sub, tv, data, patientSigSvg, turnstileSiteKey) {
+  let fieldsSchema = tv.fields_schema;
+  if (typeof fieldsSchema === 'string') {
+    try { fieldsSchema = JSON.parse(fieldsSchema); } catch (e) { fieldsSchema = []; }
+  }
+
+  // Filter only s2_ fields for the provider to fill
+  const providerFields = (Array.isArray(fieldsSchema) ? fieldsSchema : [])
+    .filter(f => f.name && f.name.startsWith('s2_'));
+
+  const providerFieldsHTML = providerFields.map(field => {
+    const requiredStr = field.required ? ' *' : '';
+    const reqAttr = field.required ? 'required' : '';
+    
+    if (field.type === 'checkbox') {
+      return `
+        <div class="flex items-start">
+          <div class="flex items-center h-5">
+            <input id="${field.name}" name="${field.name}" type="checkbox" ${reqAttr} class="focus:ring-pink-500 h-4 w-4 text-pink-600 border-gray-300 rounded">
+          </div>
+          <div class="ml-3 text-sm">
+            <label for="${field.name}" class="font-medium text-gray-700">${field.label || field.name}<span class="text-red-500">${requiredStr}</span></label>
+          </div>
+        </div>
+      `;
+    }
+    
+    return `
+      <div>
+        <label for="${field.name}" class="block text-sm font-medium text-gray-700">${field.label || field.name}<span class="text-red-500">${requiredStr}</span></label>
+        <div class="mt-1">
+          <input type="${field.type}" id="${field.name}" name="${field.name}" ${reqAttr} class="shadow-sm focus:ring-pink-500 focus:border-pink-500 block w-full sm:text-sm border-gray-300 rounded-md">
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Read-only patient data HTML
+  const readOnlyFields = Object.entries(data).map(([k, v]) => `
+    <div class="mb-4">
+      <dt class="text-sm font-medium text-gray-500">${k}</dt>
+      <dd class="mt-1 text-sm text-gray-900">${v}</dd>
+    </div>
+  `).join('');
+
+  return `
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      
+      <!-- Right Side: Provider Signing Form -->
+      <div class="bg-white p-6 rounded-lg shadow order-1 md:order-2 h-fit">
+        <h2 class="text-xl font-bold mb-4">Complete Document</h2>
+        <form id="providerForm" class="space-y-6">
+          ${providerFieldsHTML}
+          
+          <div class="mt-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-2">Provider Signature *</h3>
+            <div class="border border-gray-300 rounded-md bg-gray-50">
+              <canvas id="signaturePad" class="w-full h-40 rounded-md touch-none" style="touch-action: none;"></canvas>
+            </div>
+            <div class="flex justify-between mt-2">
+              <button type="button" id="clearBtn" class="text-sm text-gray-500 hover:text-gray-700">Clear</button>
+            </div>
+          </div>
+
+          <div class="cf-turnstile mt-4" data-sitekey="${turnstileSiteKey}"></div>
+
+          <div id="submitButtons" class="pt-4 border-t border-gray-200 mt-6 flex justify-between">
+            <button type="button" onclick="rejectSubmission()" class="text-red-600 hover:text-red-800 text-sm font-medium">Reject / Void</button>
+            <button type="button" id="submitBtn" class="bg-[#735a36] text-white px-4 py-2 rounded-md hover:bg-[#594321] transition-colors">Sign & Complete</button>
+          </div>
+          
+          <div id="loadingIndicator" class="hidden text-center text-gray-600 py-4">
+            <svg class="animate-spin h-5 w-5 mx-auto mb-2 text-[#735a36]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            <p>Processing and generating final PDF...</p>
+          </div>
+        </form>
+      </div>
+
+      <!-- Left Side: Live PDF Preview -->
+      <div class="bg-gray-100 p-8 rounded-lg shadow order-2 md:order-1 overflow-x-auto">
+        <h2 class="text-xl font-bold mb-4 text-gray-700">Document Preview</h2>
+        <div id="document-to-print" class="bg-white p-10 shadow-sm min-w-[800px] text-justify relative">
+          
+          <div class="text-center mb-10">
+            <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuCoWT3y7hI8OgYqWYAkGGLGUhoHx4WJFrGe_3Xbfrjv34HvM9aCIoxf9c0Bb3izQmfmH7OV-rpRH5UqRMF9W71btkgCFhp_JQt52rjpZxFHsJjQ7DFWex_aMDYCxeiq001D1eIgCq7-uCe_n79-aQX0T3fjUdcEu1xC45SC6QsAOiIu2r3YhlgveN0nrEK-z676vp1WhDgqF9jfZo8PQzjKcbR8vNU5JgYBrNUQxyEdP7E2hcxB8l7f8Mn3q8Nm4J4taA" alt="Vita Belle Wellness Logo" class="mx-auto h-32 w-32 rounded-full border-2 border-[#735a36] shadow-sm mb-6">
+            <h1 class="text-4xl font-bold tracking-widest text-[#1e1b18] uppercase playfair-title mb-2">${tv.title || 'Document'}</h1>
+          </div>
+
+          <div class="prose max-w-none mb-12 text-gray-800 text-justify">
+              ${tv.legal_body}
+          </div>
+
+          <!-- Submitted Patient Data -->
+          <div class="mb-10">
+              <div class="space-y-4">
+                  ${Object.entries(data).map(([k, v]) => \`<p><strong>\${k}:</strong> \${v}</p>\`).join('')}
+              </div>
+          </div>
+
+          <div class="mb-8 mt-12">
+              <div class="mb-2 no-print">
+                  <img src="\${patientSigSvg}" alt="Patient Signature" style="max-height: 150px; width: auto;" />
+              </div>
+          </div>
+
+          <!-- Placeholder for Provider Data to be injected on submit -->
+          <div id="provider-data-injection" class="mt-8 border-t border-gray-300 pt-8"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const canvas = document.getElementById('signaturePad');
+      const signaturePad = new SignaturePad(canvas, { backgroundColor: 'rgb(255, 255, 255)' });
+
+      function resizeCanvas() {
+          const ratio = Math.max(window.devicePixelRatio || 1, 1);
+          canvas.width = canvas.offsetWidth * ratio;
+          canvas.height = canvas.offsetHeight * ratio;
+          canvas.getContext("2d").scale(ratio, ratio);
+          signaturePad.clear();
+      }
+
+      window.addEventListener("resize", resizeCanvas);
+      resizeCanvas();
+
+      document.getElementById('clearBtn').addEventListener('click', () => signaturePad.clear());
+
+      async function rejectSubmission() {
+        const reason = prompt("Ingrese el motivo de anulación:");
+        if (reason) {
+          try {
+            const res = await fetch('/api/provider-submit', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ submission_id: '${sub.id}', reject: true, reason })
+            });
+            if (res.ok) window.location.reload();
+            else alert("Error al anular.");
+          } catch(e) { alert("Error: " + e.message); }
+        }
+      }
+
+      document.getElementById('submitBtn').addEventListener('click', async () => {
+          if (signaturePad.isEmpty()) {
+              alert("Por favor provea su firma antes de completar el documento.");
+              return;
+          }
+          
+          const form = document.getElementById('providerForm');
+          if (!form.checkValidity()) {
+              form.reportValidity();
+              return;
+          }
+
+          document.getElementById('submitButtons').classList.add('hidden');
+          document.getElementById('loadingIndicator').classList.remove('hidden');
+
+          const formData = new FormData(form);
+          const s2Data = Object.fromEntries(formData.entries());
+          s2Data.submission_id = '${sub.id}';
+          
+          const svgData = signaturePad.toDataURL('image/svg+xml');
+          s2Data.provider_signature_svg = svgData;
+
+          // Inject Provider Data into the PDF preview before snapshot
+          let providerHtml = '<div class="space-y-4">';
+          for (const key in s2Data) {
+            if (key !== 'submission_id' && key !== 'provider_signature_svg' && key !== 'cf-turnstile-response') {
+              providerHtml += \`<p><strong>\${key}:</strong> \${s2Data[key]}</p>\`;
+            }
+          }
+          providerHtml += '</div>';
+          providerHtml += '<div class="mt-4"><img src="' + svgData + '" style="max-height: 150px; width: auto;" /></div>';
+          
+          // Inject Audit Trail 
+          const signerName = s2Data.s2_provider_name || s2Data.s2_name || s2Data.s2_full_name || 'Signer 2';
+          providerHtml += \`
+            <div class="mt-16 pt-8 border-t border-gray-300 text-sm text-gray-600">
+              <h3 class="font-bold text-lg mb-4 text-black playfair-title">E-Signature Audit Trail</h3>
+              <p><strong>Signed by:</strong> \${signerName}</p>
+              <p><strong>Timestamp:</strong> \${new Date().toLocaleString("en-US", { timeZone: "America/New_York" })} ET</p>
+              <p><strong>Device:</strong> \${navigator.userAgent}</p>
+              <p><strong>Document ID:</strong> \${Date.now().toString(36).toUpperCase()}-\${Math.random().toString(36).substr(2, 5).toUpperCase()}</p>
+            </div>
+          \`;
+
+          document.getElementById('provider-data-injection').innerHTML = providerHtml;
+
+          const element = document.getElementById('document-to-print');
+          
+          try {
+              const pdfBlobUrl = await html2pdf().set({
+                  margin: 0.5,
+                  filename: 'document.pdf',
+                  image: { type: 'jpeg', quality: 0.98 },
+                  html2canvas: { scale: 1.5, useCORS: true, scrollY: 0 },
+                  pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+                  jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+              }).from(element).outputPdf('datauristring');
+              
+              s2Data.pdf_base64 = pdfBlobUrl;
+
+              const response = await fetch('/api/provider-submit', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(s2Data)
+              });
+
+              if (response.ok) {
+                  alert("Documento completado exitosamente.");
+                  window.location.reload();
+              } else {
+                  const errInfo = await response.json();
+                  alert("Error al guardar: " + (errInfo.error || "Desconocido"));
+                  window.location.reload();
+              }
+          } catch (e) {
+              alert("Error generando PDF: " + e.message);
+              window.location.reload();
+          }
+      });
+    </script>
+  `;
+}
 
 export async function onRequestGet(context) {
   const id = context.params.id;
@@ -9,22 +301,45 @@ export async function onRequestGet(context) {
 
   let data = {};
   let errorMsg = '';
+  let patientSigSvg = '';
+  
   try {
     if (sub.field_data_enc && sub.encryption_iv) {
       const ivParts = sub.encryption_iv.split(':');
       const fieldsIv = ivParts[0];
       const dataStr = await decryptAESGCM(sub.field_data_enc, fieldsIv, context.env.ENCRYPTION_KEY);
       data = JSON.parse(dataStr);
+      
+      const sigIv = ivParts[1] || 'unencrypted';
+      if (sigIv !== 'unencrypted' && sub.signature_svg_enc) {
+        patientSigSvg = await decryptAESGCM(sub.signature_svg_enc, sigIv, context.env.ENCRYPTION_KEY);
+      } else {
+        patientSigSvg = sub.signature_svg_enc;
+      }
     }
   } catch (e) {
     errorMsg = 'Failed to decrypt submission data.';
   }
 
-  const expiration = Math.floor(Date.now() / 1000) + 3600; // 1 hour
-  const payload = `${sub.pdf_r2_key}:${expiration}`;
-  const signature = await createHMAC(payload, context.env.PDF_SIGNING_SECRET);
-  const downloadToken = btoa(JSON.stringify({ key: sub.pdf_r2_key, exp: expiration, sig: signature }));
+  if (sub.status === 'pendiente_proveedor') {
+    const tv = await context.env.DB.prepare('SELECT * FROM template_versions WHERE id = ?').bind(sub.template_version_id).first();
+    const htmlContent = renderProviderHTML(sub, tv, data, patientSigSvg, context.env.TURNSTILE_SITE_KEY);
+    
+    return new Response(layout(`
+      <style>
+        .prose p { margin-bottom: 1rem; line-height: 1.6; }
+        .playfair-title { font-family: 'Playfair Display', serif; }
+      </style>
+      <div class="mb-6 flex justify-between items-center">
+        <h1 class="text-2xl font-semibold text-gray-900">Provider Sign-off Required</h1>
+        <a href="/admin/submissions" class="text-indigo-600 hover:text-indigo-900">&larr; Back to List</a>
+      </div>
+      ${errorMsg ? `<div class="bg-red-100 text-red-700 p-4 rounded mb-6">${errorMsg}</div>` : ''}
+      ${!errorMsg ? htmlContent : ''}
+    `), { headers: { 'Content-Type': 'text/html' } });
+  }
 
+  // COMPLETED OR ANULADO VIEW
   const dataHtml = Object.entries(data).map(([k, v]) => `
     <div class="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
       <dt class="text-sm font-medium text-gray-500">${k}</dt>
@@ -40,11 +355,28 @@ export async function onRequestGet(context) {
 
     ${errorMsg ? `<div class="bg-red-100 text-red-700 p-4 rounded mb-6">${errorMsg}</div>` : ''}
 
+    ${sub.status === 'anulado' ? `
+      <div class="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="ml-3">
+            <h3 class="text-sm font-medium text-red-800">Documento Anulado</h3>
+            <p class="text-sm text-red-700 mt-2">Motivo: ${sub.rejection_reason || 'Rechazado por proveedor'}</p>
+          </div>
+        </div>
+      </div>
+    ` : ''}
+
     <div class="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
       <div class="px-4 py-5 sm:px-6 flex justify-between items-center">
         <div>
           <h3 class="text-lg leading-6 font-medium text-gray-900">Submitted Data</h3>
           <p class="mt-1 max-w-2xl text-sm text-gray-500">Date: ${new Date(sub.created_at).toLocaleString("en-US", { timeZone: 'America/New_York' })}</p>
+          <p class="mt-1 max-w-2xl text-sm text-gray-500">Status: <span class="font-bold">${sub.status ? sub.status.toUpperCase() : 'COMPLETED'}</span></p>
         </div>
         ${sub.pdf_r2_key ? `
           <a href="/admin/submissions/${sub.id}/pdf" target="_blank" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700">Download / Print PDF</a>

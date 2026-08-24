@@ -74,7 +74,9 @@ function renderError(title, message) {
 
 function renderHTML(token, title, slug, legalBody, fieldsSchema, turnstileSiteKey) {
   // Generate form fields from schema
-  const fieldsHTML = (Array.isArray(fieldsSchema) ? fieldsSchema : []).map(field => {
+  const fieldsHTML = (Array.isArray(fieldsSchema) ? fieldsSchema : [])
+    .filter(field => !field.name?.startsWith('s2_') && field.type !== 'config')
+    .map(field => {
     const requiredStr = field.required ? ' *' : '';
     const reqAttr = field.required ? 'required' : '';
     

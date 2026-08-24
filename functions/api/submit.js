@@ -102,10 +102,13 @@ export async function onRequestPost(context) {
         try { schema = JSON.parse(schema); } catch(e) { schema = []; }
     }
 
-    // Validate fields against schema
+    // Validate fields against schema (ignore s2_ fields for public submissions)
+    const hasS2Fields = typeof schemaStr === 'string' && schemaStr.includes('"name":"s2_');
+    const submissionStatus = hasS2Fields ? 'pendiente_proveedor' : 'completado';
+
     if (Array.isArray(schema)) {
       for (const field of schema) {
-        if (field.required && !fields[field.name]) {
+        if (!field.name?.startsWith('s2_') && field.required && !fields[field.name]) {
           return new Response(JSON.stringify({ error: `Field ${field.name} is required` }), { status: 400 });
         }
       }
@@ -164,8 +167,8 @@ export async function onRequestPost(context) {
 
     const insertSubQuery = `
       INSERT INTO submissions 
-      (id, template_id, template_version_id, field_data_enc, signature_svg_enc, encryption_iv, consent_accepted, pdf_r2_key, pdf_hash, ip_hash, user_agent_hash)
-      VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
+      (id, template_id, template_version_id, field_data_enc, signature_svg_enc, encryption_iv, consent_accepted, pdf_r2_key, pdf_hash, ip_hash, user_agent_hash, status)
+      VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)
     `;
 
     const insertResult = await env.DB.prepare(insertSubQuery).bind(
@@ -178,8 +181,8 @@ export async function onRequestPost(context) {
       safePdfKey,
       safePdfHash,
       ipHash,
-      userAgentHash
-
+      userAgentHash,
+      submissionStatus
     ).run();
 
     if (token) {
