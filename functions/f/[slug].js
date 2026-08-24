@@ -63,6 +63,37 @@ function renderHTML(slug, title, legalBody, fieldsSchema, turnstileSiteKey) {
     const requiredStr = field.required ? ' *' : '';
     const reqAttr = field.required ? 'required' : '';
     
+    // Hidden fields: render as hidden input only
+    if (field.hidden) {
+      return `<input type="hidden" name="${field.name}" value="${field.locked_value || ''}">`;
+    }
+    
+    // Locked fields: show as read-only display with hidden input
+    if (field.locked) {
+      if (field.type === 'checkbox') {
+        return `
+          <div class="flex items-start">
+            <div class="flex items-center h-5">
+              <input type="hidden" name="${field.name}" value="${field.locked_value || 'on'}">
+              <input type="checkbox" checked disabled class="h-4 w-4 text-pink-600 border-gray-300 rounded opacity-60">
+            </div>
+            <div class="ml-3 text-sm">
+              <label class="font-medium text-gray-500">${field.label || field.name || 'Field'}</label>
+            </div>
+          </div>
+        `;
+      }
+      return `
+        <div>
+          <label class="block text-sm font-medium text-gray-700">${field.label || field.name || 'Field'}</label>
+          <div class="mt-1">
+            <input type="hidden" name="${field.name}" value="${field.locked_value || ''}">
+            <div class="bg-gray-100 border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-700">${field.locked_value || ''}</div>
+          </div>
+        </div>
+      `;
+    }
+    
     if (field.type === 'checkbox') {
       return `
         <div class="flex items-start">
