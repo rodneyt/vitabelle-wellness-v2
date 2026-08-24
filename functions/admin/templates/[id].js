@@ -96,3 +96,16 @@ export async function onRequestPost(context) {
     return new Response(`Error saving template version: ${err.message}`, { status: 500 });
   }
 }
+
+export async function onRequestDelete(context) {
+  try {
+    const id = context.params.id;
+    await context.env.DB.prepare('DELETE FROM templates WHERE id = ?').bind(id).run();
+    return new Response(JSON.stringify({ success: true }), { 
+      status: 200, 
+      headers: { 'Content-Type': 'application/json' } 
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+  }
+}

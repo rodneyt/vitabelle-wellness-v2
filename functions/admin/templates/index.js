@@ -40,6 +40,7 @@ export async function onRequestGet(context) {
       <div class="flex items-center space-x-4">
         <button onclick="navigator.clipboard.writeText(window.location.origin + '/f/${t.slug}'); alert('Link copied: ' + window.location.origin + '/f/${t.slug}')" class="text-sm text-gray-500 hover:text-indigo-600">Copy Link</button>
         <a href="/admin/templates/${t.id}" class="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-5 font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200">Edit</a>
+        <button onclick="deleteTemplate('${t.id}')" class="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-5 font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200">Delete</button>
       </div>
     </li>
   `).join('');
@@ -67,6 +68,18 @@ export async function onRequestGet(context) {
         </form>
       </div>
     </div>
+    <script>
+      async function deleteTemplate(id) {
+        if (!confirm('Are you sure you want to permanently delete this template? All related submissions might lose their template references. This cannot be undone.')) return;
+        try {
+          const res = await fetch('/admin/templates/' + id, { method: 'DELETE' });
+          if (res.ok) window.location.reload();
+          else alert('Failed to delete template.');
+        } catch(e) {
+          alert('Error: ' + e.message);
+        }
+      }
+    </script>
   `), { headers: { 'Content-Type': 'text/html' } });
 }
 
