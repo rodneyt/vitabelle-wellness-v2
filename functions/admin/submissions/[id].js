@@ -91,12 +91,13 @@ function renderProviderHTML(sub, tv, data, patientSigSvg, patientAudit, turnstil
       <!-- Left Side: Live PDF Preview -->
       <div class="bg-gray-100 p-8 rounded-lg shadow order-2 md:order-1 overflow-x-auto">
         <h2 class="text-xl font-bold mb-4 text-gray-700">Document Preview</h2>
-        <div id="document-to-print" class="px-8 py-4 bg-white shadow-sm text-justify relative max-w-3xl mx-auto">
-          
-          <div class="text-center mb-10">
-            <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuCoWT3y7hI8OgYqWYAkGGLGUhoHx4WJFrGe_3Xbfrjv34HvM9aCIoxf9c0Bb3izQmfmH7OV-rpRH5UqRMF9W71btkgCFhp_JQt52rjpZxFHsJjQ7DFWex_aMDYCxeiq001D1eIgCq7-uCe_n79-aQX0T3fjUdcEu1xC45SC6QsAOiIu2r3YhlgveN0nrEK-z676vp1WhDgqF9jfZo8PQzjKcbR8vNU5JgYBrNUQxyEdP7E2hcxB8l7f8Mn3q8Nm4J4taA" alt="Vita Belle Wellness Logo" class="mx-auto h-32 w-32 rounded-full border-2 border-[#735a36] shadow-sm mb-6">
-            <h1 class="text-4xl font-bold tracking-widest text-[#1e1b18] uppercase playfair-title mb-2">${tv.title || 'Document'}</h1>
-          </div>
+        <div class="max-w-3xl mx-auto bg-white shadow-sm">
+          <div id="document-to-print" class="px-8 py-4 bg-white text-justify">
+            
+            <div class="text-center mb-10">
+              <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuCoWT3y7hI8OgYqWYAkGGLGUhoHx4WJFrGe_3Xbfrjv34HvM9aCIoxf9c0Bb3izQmfmH7OV-rpRH5UqRMF9W71btkgCFhp_JQt52rjpZxFHsJjQ7DFWex_aMDYCxeiq001D1eIgCq7-uCe_n79-aQX0T3fjUdcEu1xC45SC6QsAOiIu2r3YhlgveN0nrEK-z676vp1WhDgqF9jfZo8PQzjKcbR8vNU5JgYBrNUQxyEdP7E2hcxB8l7f8Mn3q8Nm4J4taA" alt="Vita Belle Wellness Logo" class="mx-auto h-32 w-32 rounded-full border-2 border-[#735a36] shadow-sm mb-6">
+              <h1 class="text-4xl font-bold tracking-widest text-[#1e1b18] uppercase playfair-title mb-2">${tv.title || 'Document'}</h1>
+            </div>
 
           <div class="prose max-w-none mb-12 text-gray-800 text-justify">
               ${tv.legal_body}
@@ -117,7 +118,7 @@ function renderProviderHTML(sub, tv, data, patientSigSvg, patientAudit, turnstil
 
           <!-- Patient Audit Trail -->
           ${patientAudit ? `
-          <div class="mt-8 pt-8 border-t border-gray-300 text-sm text-gray-600" style="page-break-inside: avoid;">
+          <div class="mt-8 pt-8 border-t border-gray-300 text-sm text-gray-600" style="page-break-inside: avoid; display: inline-block; width: 100%;">
             <h3 class="font-bold text-lg mb-4 text-black playfair-title">Signer 1 Audit Trail</h3>
             <p><strong>Signed by:</strong> ${data.patient_full_name || data.provider_name || data.full_name || data.name || data.signer_name || 'Signer 1'}</p>
             <p><strong>Timestamp:</strong> ${new Date(patientAudit.created_at + 'Z').toLocaleString("en-US", { timeZone: "America/New_York" })} ET</p>
@@ -128,7 +129,7 @@ function renderProviderHTML(sub, tv, data, patientSigSvg, patientAudit, turnstil
           ` : ''}
 
           <!-- Placeholder for Provider Data to be injected on submit -->
-          <div id="provider-data-injection" class="mt-8 border-t border-gray-300 pt-8"></div>
+          <div id="provider-data-injection" class="mt-8 pt-8"></div>
         </div>
       </div>
     </div>
@@ -195,18 +196,18 @@ function renderProviderHTML(sub, tv, data, patientSigSvg, patientAudit, turnstil
           }
 
           // Inject Provider Data into the PDF preview before snapshot
-          let providerHtml = '<div class="space-y-4">';
+          let providerHtml = '<div class="space-y-4" style="page-break-inside: avoid; display: inline-block; width: 100%; border-top: 1px solid #d1d5db; padding-top: 2rem;">';
           for (const key in s2Data) {
             if (key !== 'submission_id' && key !== 'provider_signature_svg' && key !== 'cf-turnstile-response') {
               providerHtml += '<p><strong>' + getJsFieldLabel(key) + ':</strong> ' + s2Data[key] + '</p>';
             }
           }
           providerHtml += '</div>';
-          providerHtml += '<div class="mt-4"><img src="' + svgData + '" style="max-height: 150px; width: auto;" /></div>';
+          providerHtml += '<div class="mt-4" style="page-break-inside: avoid; display: inline-block; width: 100%;"><img src="' + svgData + '" style="max-height: 150px; width: auto;" /></div>';
           
           // Inject Audit Trail 
           const signerName = s2Data.s2_provider_name || s2Data.s2_name || s2Data.s2_full_name || 'Signer 2';
-          providerHtml += '<div class="mt-16 pt-8 border-t border-gray-300 text-sm text-gray-600" style="page-break-inside: avoid;">' +
+          providerHtml += '<div class="mt-8 pt-8 border-t border-gray-300 text-sm text-gray-600" style="page-break-inside: avoid; display: inline-block; width: 100%;">' +
               '<h3 class="font-bold text-lg mb-4 text-black playfair-title">Signer 2 Audit Trail</h3>' +
               '<p><strong>Signed by:</strong> ' + signerName + '</p>' +
               '<p><strong>Timestamp:</strong> ' + new Date().toLocaleString("en-US", { timeZone: "America/New_York" }) + ' ET</p>' +
