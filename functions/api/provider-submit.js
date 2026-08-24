@@ -13,7 +13,9 @@ export async function onRequestPost(context) {
   try {
     const data = await request.json();
     const { submission_id, provider_signature_svg, reject, reason, pdf_base64, ...s2Fields } = data;
-    const ip = request.headers.get('cf-connecting-ip') || '0.0.0.0';
+    const ip = request.headers.get('cf-connecting-ip') || 'unknown';
+    const rateLimitResult = await checkRateLimit(context.env.DB, ip, '/api/provider-submit', 50);
+    if (!rateLimitResult.allowed) return new Response(JSON.stringify({ error: 'Too many requests' }), { status: 429 });
 
     if (!submission_id) return new Response(JSON.stringify({ error: 'Missing submission ID' }), { status: 400 });
 
