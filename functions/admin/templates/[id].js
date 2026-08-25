@@ -91,19 +91,136 @@ export async function onRequestGet(context) {
         </div>
       </div>
 
-      <!-- RIGHT: Live Preview -->
+      <!-- RIGHT: WYSIWYG Document Editor -->
       <div>
-        <div class="bg-white shadow-sm rounded-lg p-6 sticky top-4">
-          <div class="flex justify-between items-center mb-4">
-            <h2 class="text-lg font-medium text-gray-900">Client Preview</h2>
-            <span class="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">How the client sees it</span>
+        <div class="bg-white shadow-sm rounded-lg sticky top-4">
+          <!-- Header -->
+          <div class="flex justify-between items-center px-6 pt-5 pb-3 border-b border-gray-100">
+            <div>
+              <h2 class="text-lg font-medium text-gray-900">Document Editor</h2>
+              <p class="text-xs text-gray-400 mt-0.5">Edit directly — changes save to the document</p>
+            </div>
+            <span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">✏️ Click to Edit</span>
           </div>
-          <div id="livePreview" class="border border-gray-200 rounded-lg p-6 bg-gray-50 max-h-[70vh] overflow-y-auto">
-            <!-- Preview rendered by JS -->
+
+          <!-- Formatting Toolbar -->
+          <div id="editorToolbar" class="flex flex-wrap items-center gap-1 px-4 py-2 bg-gray-50 border-b border-gray-200">
+            <!-- Font Size -->
+            <select id="fontSizeSelect" onchange="execFmt('fontSize', this.value)" class="text-xs border border-gray-300 rounded px-1 py-1 bg-white">
+              <option value="1">Tiny</option>
+              <option value="2">Small</option>
+              <option value="3" selected>Normal</option>
+              <option value="4">Medium</option>
+              <option value="5">Large</option>
+              <option value="6">X-Large</option>
+              <option value="7">Huge</option>
+            </select>
+
+            <div class="w-px h-5 bg-gray-300 mx-1"></div>
+
+            <!-- Text Style -->
+            <button type="button" onclick="execFmt('bold')" title="Bold" class="toolbar-btn font-bold">B</button>
+            <button type="button" onclick="execFmt('italic')" title="Italic" class="toolbar-btn italic">I</button>
+            <button type="button" onclick="execFmt('underline')" title="Underline" class="toolbar-btn underline">U</button>
+
+            <div class="w-px h-5 bg-gray-300 mx-1"></div>
+
+            <!-- Alignment -->
+            <button type="button" onclick="execFmt('justifyLeft')" title="Align Left" class="toolbar-btn">&#8676;</button>
+            <button type="button" onclick="execFmt('justifyCenter')" title="Center" class="toolbar-btn">&#8596;</button>
+            <button type="button" onclick="execFmt('justifyRight')" title="Align Right" class="toolbar-btn">&#8677;</button>
+            <button type="button" onclick="execFmt('justifyFull')" title="Justify" class="toolbar-btn">&#8644;</button>
+
+            <div class="w-px h-5 bg-gray-300 mx-1"></div>
+
+            <!-- Lists -->
+            <button type="button" onclick="execFmt('insertUnorderedList')" title="Bullet List" class="toolbar-btn">• List</button>
+            <button type="button" onclick="execFmt('insertOrderedList')" title="Numbered List" class="toolbar-btn">1. List</button>
+
+            <div class="w-px h-5 bg-gray-300 mx-1"></div>
+
+            <!-- Indent -->
+            <button type="button" onclick="execFmt('indent')" title="Indent" class="toolbar-btn">→</button>
+            <button type="button" onclick="execFmt('outdent')" title="Outdent" class="toolbar-btn">←</button>
+
+            <div class="w-px h-5 bg-gray-300 mx-1"></div>
+
+            <!-- History -->
+            <button type="button" onclick="execFmt('undo')" title="Undo" class="toolbar-btn">↩</button>
+            <button type="button" onclick="execFmt('redo')" title="Redo" class="toolbar-btn">↪</button>
+
+            <div class="w-px h-5 bg-gray-300 mx-1"></div>
+
+            <!-- Remove Formatting -->
+            <button type="button" onclick="execFmt('removeFormat')" title="Clear Formatting" class="toolbar-btn text-red-500">✕ Format</button>
+          </div>
+
+          <!-- Document Preview Area — fully editable -->
+          <div id="livePreview" class="overflow-y-auto" style="max-height: 75vh;">
+            <!-- Header: Logo + Title (not editable) -->
+            <div class="text-center py-6 px-6 border-b border-gray-100 bg-gray-50">
+              <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuCoWT3y7hI8OgYqWYAkGGLGUhoHx4WJFrGe_3Xbfrjv34HvM9aCIoxf9c0Bb3izQmfmH7OV-rpRH5UqRMF9W71btkgCFhp_JQt52rjpZxFHsJjQ7DFWex_aMDYCxeiq001D1eIgCq7-uCe_n79-aQX0T3fjUdcEu1xC45SC6QsAOiIu2r3YhlgveN0nrEK-z676vp1WhDgqF9jfZo8PQzjKcbR8vNU5JgYBrNUQxyEdP7E2hcxB8l7f8Mn3q8Nm4J4taA" alt="Logo" class="mx-auto h-16 w-16 rounded-full border-2 border-[#735a36] shadow-sm mb-2">
+              <h1 class="text-lg font-bold tracking-widest text-[#1e1b18] uppercase" style="font-family: Playfair Display, serif;">${template.title}</h1>
+            </div>
+
+            <!-- Editable Legal Body -->
+            <div id="legalEditor"
+              contenteditable="true"
+              class="px-8 py-6 text-gray-800 text-justify focus:outline-none"
+              style="min-height: 300px; line-height: 1.7; font-size: 14px;"
+              data-placeholder="Click here to start editing the document body..."
+            ></div>
+
+            <!-- Form Fields (read-only display) -->
+            <div id="fieldsPreviewArea" class="px-8 pb-6">
+              <div class="border-t border-gray-300 pt-4 mb-3">
+                <p class="text-xs text-gray-400 uppercase tracking-wider">Form Fields (not editable here — use left panel)</p>
+              </div>
+              <div id="fieldsPreviewList" class="space-y-4"></div>
+            </div>
           </div>
         </div>
       </div>
     </div>
+
+    <style>
+      .toolbar-btn {
+        padding: 3px 8px;
+        font-size: 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
+        background: white;
+        cursor: pointer;
+        color: #374151;
+        transition: all 0.1s;
+      }
+      .toolbar-btn:hover {
+        background: #e0e7ff;
+        border-color: #6366f1;
+        color: #4338ca;
+      }
+      #legalEditor:empty:before {
+        content: attr(data-placeholder);
+        color: #9ca3af;
+        font-style: italic;
+      }
+      #legalEditor h2, #legalEditor h3 {
+        font-family: 'Playfair Display', serif;
+        text-transform: uppercase;
+        background-color: #fbdbe2;
+        display: inline-block;
+        padding: 6px 16px;
+        margin-top: 2.5rem;
+        margin-bottom: 1.5rem;
+        color: #1e1b18;
+        letter-spacing: 0.05em;
+        font-size: 1.25rem;
+        font-weight: 600;
+        border-radius: 4px;
+      }
+      #legalEditor p { margin-bottom: 1rem; }
+    </style>
+
 
     <script>
       // Initialize fields from server data
@@ -242,109 +359,90 @@ export async function onRequestGet(context) {
       }
 
       function updatePreview() {
+        // Only update the fields preview panel — the legal body is directly edited
         const clientFields = fields.filter(f => !f.name?.startsWith('s2_') && f.type !== 'config' && !f.hidden);
-        const legalBody = document.getElementById('legalBodyInput').value;
+        const fieldsPreviewList = document.getElementById('fieldsPreviewList');
         
         let html = '';
-        
-        // Document header with logo and title
-        html += '<div class="text-center mb-6">';
-        html += '<img src="https://lh3.googleusercontent.com/aida-public/AB6AXuCoWT3y7hI8OgYqWYAkGGLGUhoHx4WJFrGe_3Xbfrjv34HvM9aCIoxf9c0Bb3izQmfmH7OV-rpRH5UqRMF9W71btkgCFhp_JQt52rjpZxFHsJjQ7DFWex_aMDYCxeiq001D1eIgCq7-uCe_n79-aQX0T3fjUdcEu1xC45SC6QsAOiIu2r3YhlgveN0nrEK-z676vp1WhDgqF9jfZo8PQzjKcbR8vNU5JgYBrNUQxyEdP7E2hcxB8l7f8Mn3q8Nm4J4taA" alt="Logo" class="mx-auto h-20 w-20 rounded-full border-2 border-[#735a36] shadow-sm mb-3">';
-        html += '<h1 class="text-xl font-bold tracking-widest text-[#1e1b18] uppercase" style="font-family: Playfair Display, serif;">${template.title}</h1>';
-        html += '</div>';
-        
-        // Legal body
-        if (legalBody.trim()) {
-          html += '<div class="prose max-w-none mb-6 text-gray-800 text-justify text-sm" style="max-height: 300px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: white;">';
-          html += legalBody;
-          html += '</div>';
-        }
-        
-        // Divider
-        html += '<div class="border-t border-gray-300 my-4"></div>';
-        html += '<p class="text-xs text-gray-400 uppercase tracking-wider mb-3">Form Fields</p>';
-        
-        // Form fields
-        html += '<div class="space-y-4">';
         clientFields.forEach(f => {
           if (f.type === 'signature') {
-            html += \`
-              <div class="preview-field">
-                <label class="block text-sm font-medium text-gray-700 mb-1">\${f.label || f.name}\${f.required ? ' <span class="text-red-500">*</span>' : ''}</label>
-                <div class="border-2 border-dashed border-gray-300 rounded-md h-24 flex items-center justify-center text-gray-400 text-sm bg-white">
-                  ✍️ Signature Pad
-                </div>
-              </div>
-            \`;
+            html += \`<div class="preview-field mb-3">
+              <label class="block text-sm font-medium text-gray-700 mb-1">\${f.label || f.name}\${f.required ? ' <span class="text-red-500">*</span>' : ''}</label>
+              <div class="border-2 border-dashed border-gray-300 rounded-md h-20 flex items-center justify-center text-gray-400 text-sm bg-white">✍️ Signature Pad</div>
+            </div>\`;
           } else if (f.type === 'checkbox') {
-            html += \`
-              <div class="preview-field flex items-center">
-                <input type="checkbox" \${f.locked ? 'checked disabled' : ''} class="h-4 w-4 text-pink-600 border-gray-300 rounded mr-2">
-                <label class="text-sm text-gray-700">\${f.label || f.name}\${f.required ? ' <span class="text-red-500">*</span>' : ''}</label>
-                \${f.locked ? '<span class="ml-2 text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">🔒 Locked</span>' : ''}
-              </div>
-            \`;
+            html += \`<div class="preview-field flex items-center mb-2">
+              <input type="checkbox" \${f.locked ? 'checked' : ''} disabled class="h-4 w-4 text-pink-600 border-gray-300 rounded mr-2">
+              <label class="text-sm text-gray-700">\${f.label || f.name}\${f.required ? ' <span class="text-red-500">*</span>' : ''}</label>
+              \${f.locked ? '<span class="ml-2 text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">🔒 Locked</span>' : ''}
+            </div>\`;
           } else if (f.locked) {
-            html += \`
-              <div class="preview-field">
-                <label class="block text-sm font-medium text-gray-700 mb-1">\${f.label || f.name}\${f.required ? ' <span class="text-red-500">*</span>' : ''}</label>
-                <div class="bg-gray-100 border border-gray-300 rounded-md p-2 text-sm text-gray-700 flex items-center justify-between">
-                  <span>\${f.locked_value || '<em class="text-gray-400">No value set</em>'}</span>
-                  <span class="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">🔒 Locked</span>
-                </div>
+            html += \`<div class="preview-field mb-3">
+              <label class="block text-sm font-medium text-gray-700 mb-1">\${f.label || f.name}\${f.required ? ' <span class="text-red-500">*</span>' : ''}</label>
+              <div class="bg-gray-100 border border-gray-300 rounded-md p-2 text-sm text-gray-700 flex items-center justify-between">
+                <span>\${f.locked_value || '<em class="text-gray-400">No value set</em>'}</span>
+                <span class="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">🔒 Locked</span>
               </div>
-            \`;
+            </div>\`;
           } else {
-            html += \`
-              <div class="preview-field">
-                <label class="block text-sm font-medium text-gray-700 mb-1">\${f.label || f.name}\${f.required ? ' <span class="text-red-500">*</span>' : ''}</label>
-                <input type="\${f.type || 'text'}" class="block w-full text-sm rounded-md border-gray-300 p-2 border bg-white" placeholder="Client fills this..." disabled>
-              </div>
-            \`;
+            html += \`<div class="preview-field mb-3">
+              <label class="block text-sm font-medium text-gray-700 mb-1">\${f.label || f.name}\${f.required ? ' <span class="text-red-500">*</span>' : ''}</label>
+              <input type="\${f.type || 'text'}" class="block w-full text-sm rounded-md border-gray-300 p-2 border bg-white" placeholder="Client fills this..." disabled>
+            </div>\`;
           }
         });
-        html += '</div>';
 
-        // Show hidden fields indicator
         const hiddenFields = fields.filter(f => f.hidden);
-        if (hiddenFields.length > 0) {
-          html += '<div class="mt-4 pt-3 border-t border-dashed border-gray-300">';
-          html += '<p class="text-xs text-gray-400 italic">👁 ' + hiddenFields.length + ' hidden field(s) not shown to client</p>';
-          html += '</div>';
-        }
-
-        // Show provider fields indicator
+        if (hiddenFields.length > 0) html += \`<p class="text-xs text-gray-400 italic mt-2">👁 \${hiddenFields.length} hidden field(s) not shown to client</p>\`;
         const providerFields = fields.filter(f => f.name?.startsWith('s2_'));
-        if (providerFields.length > 0) {
-          html += '<div class="mt-2">';
-          html += '<p class="text-xs text-amber-500 italic">⚠️ ' + providerFields.length + ' provider-only field(s) shown only in CRM</p>';
-          html += '</div>';
-        }
+        if (providerFields.length > 0) html += \`<p class="text-xs text-amber-500 italic mt-1">⚠️ \${providerFields.length} provider field(s) shown only in CRM</p>\`;
 
-        preview.innerHTML = html;
+        fieldsPreviewList.innerHTML = html;
+      }
+
+      // execCommand wrapper for toolbar
+      function execFmt(cmd, val) {
+        document.getElementById('legalEditor').focus();
+        document.execCommand(cmd, false, val || null);
+        syncEditorToTextarea();
+      }
+
+      // Sync legalEditor contenteditable → hidden textarea
+      function syncEditorToTextarea() {
+        document.getElementById('legalBodyInput').value = document.getElementById('legalEditor').innerHTML;
       }
 
       // Event listeners
       document.getElementById('addFieldBtn').addEventListener('click', addField);
-      
+
+      // Wire up contenteditable → textarea sync
+      const legalEditor = document.getElementById('legalEditor');
+      legalEditor.addEventListener('input', syncEditorToTextarea);
+      legalEditor.addEventListener('keyup', syncEditorToTextarea);
+
       document.getElementById('templateForm').addEventListener('submit', function(e) {
-        // Clean up fields before saving
+        // Sync editor to textarea one last time
+        syncEditorToTextarea();
+        // Clean up fields
         const cleanFields = fields.map(f => {
           const clean = { name: f.name, label: f.label, type: f.type, required: !!f.required };
           if (f.locked) { clean.locked = true; clean.locked_value = f.locked_value || ''; }
           if (f.hidden) { clean.hidden = true; }
-          if (f.locked_value && f.locked) { clean.locked_value = f.locked_value; }
           return clean;
         });
         document.getElementById('fieldsSchemaInput').value = JSON.stringify(cleanFields);
       });
 
-      // Update preview when legal body changes
-      document.getElementById('legalBodyInput').addEventListener('input', updatePreview);
+      // Load existing legal body HTML into the contenteditable editor
+      (function initEditor() {
+        const rawHtml = document.getElementById('legalBodyInput').value;
+        document.getElementById('legalEditor').innerHTML = rawHtml;
+      })();
 
-      // Initial render
+      // Initial fields render
       renderFields();
     </script>
+
   `), { headers: { 'Content-Type': 'text/html' } });
 }
 
