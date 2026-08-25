@@ -139,6 +139,12 @@ export async function onRequestGet(context) {
 
             <div class="w-px h-5 bg-gray-300 mx-1"></div>
 
+            <!-- Tables / Columns -->
+            <button type="button" onclick="insertTable(2)" title="Insert 2-Column Grid" class="toolbar-btn">⊞ 2-Col</button>
+            <button type="button" onclick="insertTable(3)" title="Insert 3-Column Grid" class="toolbar-btn">⊞ 3-Col</button>
+
+            <div class="w-px h-5 bg-gray-300 mx-1"></div>
+
             <!-- Indent -->
             <button type="button" onclick="execFmt('indent')" title="Indent" class="toolbar-btn">→</button>
             <button type="button" onclick="execFmt('outdent')" title="Outdent" class="toolbar-btn">←</button>
@@ -405,6 +411,15 @@ export async function onRequestGet(context) {
         document.getElementById('legalEditor').focus();
         document.execCommand(cmd, false, val || null);
         syncEditorToTextarea();
+      }
+
+      function insertTable(cols) {
+        let html = '<table style="width: 100%; border-collapse: collapse; margin-bottom: 1rem;"><tbody><tr>';
+        for(let i=0; i<cols; i++) {
+          html += '<td style="border: 1px solid #d1d5db; padding: 12px; text-align: center; vertical-align: top;"><br></td>';
+        }
+        html += '</tr></tbody></table><p><br></p>';
+        execFmt('insertHTML', html);
       }
 
       // Sync legalEditor contenteditable → hidden textarea
